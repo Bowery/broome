@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Bowery/broadway/db"
 	"github.com/bradrydzewski/go.stripe"
 	"github.com/gorilla/mux"
 )
@@ -67,7 +68,7 @@ func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
 		email = req.PostFormValue("email")
 	}
 
-	u := &User{
+	u := &db.Developer{
 		Name:            name,
 		Email:           email,
 		NextPaymentTime: time.Now().Add(time.Hour * 24 * 30),
@@ -95,7 +96,8 @@ func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
 		res.Send(http.StatusBadRequest)
 		return
 	}
-	u, err := GetUser(id)
+
+	u, err := db.GetDeveloperById(id)
 	if err != nil {
 		res.Body["status"] = "failed"
 		res.Body["err"] = err.Error()
@@ -171,7 +173,7 @@ func SessionHandler(rw http.ResponseWriter, req *http.Request) {
 
 	id := mux.Vars(req)["id"]
 	fmt.Println("Getting user by id", id)
-	u, err := GetUser(id)
+	u, err := db.GetDeveloperById(id)
 	if err != nil {
 		res.Body["status"] = "failed"
 		res.Body["error"] = err.Error()

@@ -55,5 +55,5 @@ echo "--> Compiling Assets with Myth"
 myth static/style.css static/out.css
 
 
-echo "--> Running on Port 3000"
+echo "--> Running on Port 4000"
 ../bin/broadway
