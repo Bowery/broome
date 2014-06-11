@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Bowery, Enterprise-Grade Private Development Cloud.">
+    <title>Bowery · Styleguide</title>
+    <link rel="stylesheet" type="text/css" href="/static/reset.css">
+    <link rel="stylesheet" type="text/css" href="/static/out.css">
+    <script type="text/javascript" src="//use.typekit.net/lmq5qqk.js"></script>
+    <script type="text/javascript">try{Typekit.load();}catch(e){}</script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="group title-group">
+        <h1>Style Guide</h1>
+        <h4>Bowery's Kryptonite</h4>
+      </div>
+      <div class="group button-group">
+        <h2>Buttons</h2>
+        <p>Buttons should only be used when the <a href="">resulting</a> action does not cause a page <a href="">load</a>. Otherwise you should use an a tag.</p>
+        <button type="button" class="btn btn-default">Default</button>
+        <button type="button" class="btn btn-primary">Primary</button>
+      </div>
+      <div class="group code-group">
+        <h2>Code</h2>
+        <pre class="code">
+
+$("a[href='Degrassi']").click(function() {
+  $("html, body").animate({ scrollTop: 0 }, "slow");
+  alert("Started from the bottom, now we're here");
+  return false;
+});
+        </pre>
+      </div>
+      <div class="group list-group">
+        <h2>Lists</h2>
+        <ul class="list">
+          <li class="item">Some Item</li>
+          <li class="item">Other Item</li>
+          <li class="item">Last One</li>
+        </ul>
+        <ol class="list">
+          <li class="item">Some Item</li>
+          <li class="item">Other Item</li>
+          <li class="item">Last One</li>
+        </ol>
+        <dl class="list">
+            <dt>Created Bagger.io</dt>
+            <dd>just now</dd>
+            <dt>Revolutionized the grocery bagger industry</dt>
+            <dd>12pm yesterday</dd>
+            <dt>Something pretty cool goes here.</dt>
+            <dd>3am last Tuesday</dd>
+        </dl>
+      </div>
+      <div class="group forms-group">
+        <h2>Forms</h2>
+        <form class="form">
+            <div class="form-group">
+              <label>Name</label>
+              <input type="text" class="text-input">
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" class="text-input">
+            </div>
+            <div class="form-group">
+              <label>Password</label>
+              <input type="password" class="text-input">
+            </div>
+            <input type="submit" class="btn btn-success">
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

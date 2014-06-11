@@ -1,0 +1,28 @@
+<h1>Crosby Signup</h1>
+<div class="group">
+  <form action="/session" method="POST" class="form">
+    <input type="hidden" name="html" value="true">
+    <div class="form-group">
+      <label for="account">Account Number</label>
+      <input type="text" name="id" id="account" class="text-input" required>
+    </div>
+    <div class="form-group">
+      <label for="name">Name</label>
+      <input type="text" name="name" class="text-input" required>
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" name="password" class="text-input" required>
+    </div>
+    <script
+      src="https://checkout.stripe.com/v2/checkout.js"
+      class="stripe-button"
+      data-label="Pay with Stripe"
+      data-key="{{.stripePubKey}}"
+      data-image="http://bowery.io/static/img/logo.png"
+      data-name="Crosby by Bowery, Inc."
+      data-description="Annual License"
+      data-amount="2500">
+    </script>
+  </form>
+</div>
