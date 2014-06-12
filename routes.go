@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Bowery/broome/db"
 	"github.com/bradrydzewski/go.stripe"
 	"github.com/gorilla/mux"
 )
@@ -28,7 +29,8 @@ type Route struct {
 // List of named routes.
 var Routes = []*Route{
 	&Route{"/", []string{"GET"}, HomeHandler},
-	&Route{"/signup", []string{"GET"}, SignUpHandler},
+	&Route{"/developers", []string{"GET"}, AdminHandler},
+	&Route{"/signup/{id}", []string{"GET"}, SignUpHandler},
 	&Route{"/thanks!", []string{"GET"}, ThanksHandler},
 	&Route{"/healthz", []string{"GET"}, HealthzHandler},
 	&Route{"/static/{rest}", []string{"GET"}, http.StripPrefix("/static/", http.FileServer(http.Dir(STATIC_DIR))).ServeHTTP},
@@ -51,6 +53,16 @@ func HomeHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// GET /developers, Admin Interface that lists developers
+func AdminHandler(rw http.ResponseWriter, req *http.Request) {
+	ds, _ := db.GetDevelopers(map[string]interface{}{})
+	if err := RenderTemplate(rw, "admin", map[string][]*db.Developer{
+		"Developers": ds,
+	}); err != nil {
+		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
+	}
+}
+
 // POST /session, Creates a new user and charges them for the first year.
 func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
 	res := NewResponder(rw, req)
@@ -67,7 +79,7 @@ func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
 		email = req.PostFormValue("email")
 	}
 
-	u := &User{
+	u := &db.Developer{
 		Name:            name,
 		Email:           email,
 		NextPaymentTime: time.Now().Add(time.Hour * 24 * 30),
@@ -95,7 +107,8 @@ func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
 		res.Send(http.StatusBadRequest)
 		return
 	}
-	u, err := GetUser(id)
+
+	u, err := db.GetDeveloperById(id)
 	if err != nil {
 		res.Body["status"] = "failed"
 		res.Body["err"] = err.Error()
@@ -116,7 +129,7 @@ func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 	u.Password = HashPassword(req.PostFormValue("password"), u.Salt)
 
-	// Create Stripe Customer
+	// // Create Stripe Customer
 	customerParams := stripe.CustomerParams{
 		Email: u.Email,
 		Desc:  u.Name,
@@ -171,7 +184,7 @@ func SessionHandler(rw http.ResponseWriter, req *http.Request) {
 
 	id := mux.Vars(req)["id"]
 	fmt.Println("Getting user by id", id)
-	u, err := GetUser(id)
+	u, err := db.GetDeveloperById(id)
 	if err != nil {
 		res.Body["status"] = "failed"
 		res.Body["error"] = err.Error()
@@ -222,7 +235,7 @@ func SessionHandler(rw http.ResponseWriter, req *http.Request) {
 	return
 }
 
-// GET /signup, Renders signup find. Will also handle billing
+// GET /signup/:id, Renders signup find. Will also handle billing
 func SignUpHandler(w http.ResponseWriter, req *http.Request) {
 	stripePubKey := "pk_test_m8TQEAkYWSc1jZh7czo8xhA7"
 	if os.Getenv("ENV") == "production" {
@@ -232,6 +245,7 @@ func SignUpHandler(w http.ResponseWriter, req *http.Request) {
 	if err := RenderTemplate(w, "signup", map[string]interface{}{
 		"isSignup":     true,
 		"stripePubKey": stripePubKey,
+		"id":           mux.Vars(req)["id"],
 	}); err != nil {
 		RenderTemplate(w, "error", map[string]string{"Error": err.Error()})
 	}

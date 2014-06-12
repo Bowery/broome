@@ -19,7 +19,7 @@ func main() {
 		route.HandlerFunc(r.Handler)
 	}
 
-	port := ":3000"
+	port := ":4000"
 	if os.Getenv("ENV") == "production" {
 		port = ":80"
 	}

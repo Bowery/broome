@@ -1,5 +1,5 @@
 :root {
-  --yellow: #ffd200;
+  --accent-color: #ff9933;
   --red: #ad2b2e; /* TODO thebyrd find red that matches yellow */
   --grey-dark: #444;
   --grey: #c2c2c2;
@@ -17,7 +17,7 @@
 }
 
 body {
-  border-top: var(--top-line-height) solid var(--yellow);
+  border-top: var(--top-line-height) solid var(--accent-color);
   font-family: "museo-slab", serif;
   font-size: 16px;
   font-weight: 300;
@@ -55,12 +55,18 @@ h3 {
 h4 {
   font-size: 1.313em;
   text-transform: uppercase;
-  background: url("/static/yellow-stripe.png") repeat;
+  /*background: url("/static/yellow-stripe.png") repeat;*/
   display: inline-block; /* so the background is only behind the text */
 }
 
 img {
   width: 100%
+}
+
+.logo {
+  float: left;
+  width: 100px;
+  margin-right: 20px
 }
 
 .container {
@@ -95,15 +101,15 @@ img {
 }
 .btn:hover {
   color: white;
-  background-color: var(--yellow);
+  background-color: var(--accent-color);
   border-radius: 4px;
 }
 .btn-default {
   background-color: var(--grey);
 }
 .btn-primary {
-  background-color: var(--yellow);
-  border-color: var(--yellow);
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
 }
 
 pre.code {
@@ -127,7 +133,7 @@ input:focus, input:active {
   outline: none;
 }
 .form-group input:focus, .form-group input:active {
-  border-color: var(--yellow);
+  border-color: var(--accent-color);
 }
 
 .form-group input.warning,
@@ -200,6 +206,9 @@ input:focus, input:active {
 }
 .download-group .description {
   margin: 15px 0 0 30px;
+}
+.group-title h1 {
+  padding-top: 10px;
 }
 
 @media only screen and (max-device-width: 480px) {
