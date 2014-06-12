@@ -56,6 +56,11 @@ func GetDeveloperById(id string) (*Developer, error) {
 	return d, developers.FindId(id).One(&d)
 }
 
+func GetDevelopers(query bson.M) ([]*Developer, error) {
+	out := []*Developer{}
+	return out, developers.Find(query).All(out)
+}
+
 func GetDeveloper(d *Developer) (*Developer, error) {
 	query := bson.M{}
 

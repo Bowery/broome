@@ -1,11 +1,8 @@
 <h1>Signup</h1>
 <div class="group">
-  <form action="/session" method="POST" class="form">
-    <input type="hidden" name="html" value="true">
-    <div class="form-group">
-      <label for="account">Account Number</label>
-      <input type="text" name="id" id="account" class="text-input" required>
-    </div>
+  <form action="/signup" method="POST" class="form">
+    <input type="hidden" name="id" value="{{.id}}">
+
     <div class="form-group">
       <label for="name">Name</label>
       <input type="text" name="name" class="text-input" required>

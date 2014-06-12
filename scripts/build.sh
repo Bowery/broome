@@ -39,14 +39,14 @@ go get \
   -ldflags "${CGO_LDFLAGS}" \
   ./...
 
-# Build Broadway!
-echo "--> Building Broadway..."
+# Build Broome!
+echo "--> Building Broome..."
 cd "${DIR}"
 go build \
     -ldflags "${CGO_LDFLAGS} -X main.GitCommit ${GIT_COMMIT}${GIT_DIRTY}" \
     -v \
-    -o ../bin/broadway${EXTENSION}
-cp ../bin/broadway${EXTENSION} ${GOPATHSINGLE}/bin
+    -o ../bin/broome${EXTENSION}
+cp ../bin/broome${EXTENSION} ${GOPATHSINGLE}/bin
 
 /bin/bash ${DIR}/scripts/check-mongo.sh
 /bin/bash ${DIR}/scripts/check-myth.sh
@@ -56,4 +56,4 @@ myth static/style.css static/out.css
 
 
 echo "--> Running on Port 4000"
-../bin/broadway
+../bin/broome
