@@ -2,10 +2,11 @@
   <h1>Account Admin</h1>
 </div>
 <div class="group group-user-list">
-
   <ul class="list user-list">
     {{range .Developers}}
-      <li class="item">{{$.Name}}</li>
+      <li class="item">
+        <a href="/developers/{{.Token}}">{{.Name}}</a>
+      </li>
     {{end}}
   </ul>
 </div>

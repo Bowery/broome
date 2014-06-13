@@ -96,8 +96,7 @@ img {
   user-select: none;
   color: white;
   border-radius: 0px;
-  transition: border-radius 300ms;
-  transition: background-color 300ms;
+  transition: border-radius 300ms, background-color 300ms;
 }
 .btn:hover {
   color: white;
