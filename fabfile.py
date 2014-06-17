@@ -12,10 +12,9 @@ env.password = 'java$cript'
 def restart():
   with cd('/home/ubuntu/gocode/src/' + project):
     run('git pull')
-    with cd('server'):
-      sudo('GOPATH=/home/ubuntu/gocode go get -d')
-      sudo('GOPATH=/home/ubuntu/gocode go build')
-      run('myth static/style.css static/out.css')
+    sudo('GOPATH=/home/ubuntu/gocode go get -d')
+    sudo('GOPATH=/home/ubuntu/gocode go build')
+    run('myth static/style.css static/out.css')
 
     sudo('cp -f ' + project + '.conf /etc/init/' + project + '.conf')
     sudo('initctl reload-configuration')

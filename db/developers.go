@@ -7,6 +7,7 @@ import (
 	"github.com/cenkalti/backoff"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
+	"os"
 	"time"
 )
 
@@ -30,7 +31,12 @@ type Developer struct {
 }
 
 func init() {
-	session, err := mgo.Dial("localhost")
+	dbAddr := "localhost"
+	if os.Getenv("ENV") == "production" {
+		dbAddr = "ec2-54-196-181-224.compute-1.amazonaws.com"
+	}
+
+	session, err := mgo.Dial(dbAddr)
 	if err != nil {
 		panic(err)
 	}
