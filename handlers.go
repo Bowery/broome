@@ -39,15 +39,14 @@ func (ah *AuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Skipping Auth For Signup
-	if strings.Index(req.URL.Path, "/signup") != -1 || strings.Index(req.URL.Path, "/static") != -1 {
+	// Skipping Auth For Signup, Static, & healthz
+	if strings.Index(req.URL.Path, "/signup") != -1 || strings.Index(req.URL.Path, "/static") != -1 || strings.Index(req.URL.Path, "/healthz") != -1 {
 		fmt.Println("Skipping auth Check. Rendering Signup Page")
 		ah.Handler.ServeHTTP(rw, req)
 		return
 	}
 
 	h, ok := req.Header["Authorization"]
-
 	if !ok || len(h) == 0 {
 		ForceLogin(rw)
 		return
