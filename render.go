@@ -13,7 +13,7 @@ import (
 var TEMPLATE_DIR string = "static"
 
 func execute(name string, data interface{}) (*bytes.Buffer, error) {
-	fmt.Println("called execute", name, data)
+	fmt.Println("executed template", name, "with data:", data)
 
 	tmplName := name + "-partial"
 

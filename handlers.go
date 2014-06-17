@@ -32,6 +32,20 @@ func ForceLogin(rw http.ResponseWriter) {
 }
 
 func (ah *AuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	// Skip Auth for Dev Creation
+	if req.URL.Path == "/developers" && req.Method == "POST" {
+		fmt.Println("Skipping Auth Check. Creating New Developer")
+		ah.Handler.ServeHTTP(rw, req)
+		return
+	}
+
+	// Skipping Auth For Signup
+	if strings.Index(req.URL.Path, "/signup") != -1 || strings.Index(req.URL.Path, "/static") != -1 {
+		fmt.Println("Skipping auth Check. Rendering Signup Page")
+		ah.Handler.ServeHTTP(rw, req)
+		return
+	}
+
 	h, ok := req.Header["Authorization"]
 
 	if !ok || len(h) == 0 {
@@ -84,7 +98,6 @@ func (ah *AuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	fmt.Println(dev)
 	ah.Handler.ServeHTTP(rw, req)
 }
 
