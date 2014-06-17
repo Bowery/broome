@@ -41,7 +41,14 @@ func init() {
 		panic(err)
 	}
 
-	developers = session.DB("bowery").C("developers")
+	db := session.DB("bowery")
+
+	if os.Getenv("ENV") == "production" {
+		if err := db.Login("bowery", "java$cript"); err != nil {
+			panic(err)
+		}
+	}
+	developers = db.C("developers")
 }
 
 func (d *Developer) Save() error {
