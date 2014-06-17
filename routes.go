@@ -1,21 +1,26 @@
 // Copyright 2013-2014 Bowery, Inc.
-// Contains the routes for crosby server.
+// Contains the routes for broome server.
 package main
 
 import (
 	"fmt"
+	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
+	"time"
+
 	"github.com/Bowery/broome/db"
 	"github.com/Bowery/broome/util"
 	"github.com/bradrydzewski/go.stripe"
 	"github.com/gorilla/mux"
-	"net/http"
-	"os"
-	"path/filepath"
-	"time"
 )
 
 // 32 MB, same as http.
-const httpMaxMem = 32 << 10
+const (
+	httpMaxMem = 32 << 10
+	slackToken = "xoxp-2157690968-2174706611-2385261803-c58929"
+)
 
 var STATIC_DIR string = TEMPLATE_DIR
 
@@ -93,6 +98,17 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 		Name:  params["name"],
 		Email: params["email"],
 	}
+
+	// Post to slack
+	if os.Getenv("ENV") == "production" {
+		payload := url.Values{}
+		payload.Set("token", slackToken)
+		payload.Set("channel", "#users")
+		payload.Set("text", dev.Name+" "+dev.Email+" just signed up.")
+		payload.Set("username", "Drizzy Drake")
+		http.PostForm("https://slack.com/api/chat.postMessage", payload)
+	}
+
 	res.Body["status"] = "todo"
 	res.Body["developer"] = dev
 	res.Send(http.StatusOK)
