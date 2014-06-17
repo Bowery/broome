@@ -4,7 +4,7 @@ import requests
 project = "broome"
 repository = "git@github.com:Bowery/" + project + ".git"
 hosts = [
-  'ubuntu@ec2-54-82-96-245.compute-1.amazonaws.com'
+  'ubuntu@ec2-67-202-32-171.compute-1.amazonaws.com'
 ]
 env.key_filename = '/home/ubuntu/.ssh/id_aws'
 env.password = 'java$cript'
