@@ -56,4 +56,4 @@ myth static/style.css static/out.css
 
 
 echo "--> Running on Port 4000"
-../bin/broome
+ENV=development ../bin/broome

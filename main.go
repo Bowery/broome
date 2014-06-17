@@ -4,15 +4,15 @@ package main
 
 import (
 	"fmt"
+	"github.com/gorilla/mux"
 	"net/http"
 	"os"
-
-	"github.com/gorilla/mux"
 )
 
 func main() {
 	router := mux.NewRouter()
 	router.NotFoundHandler = NotFoundHandler
+
 	for _, r := range Routes {
 		route := router.NewRoute()
 		route.Path(r.Path).Methods(r.Methods...)
@@ -27,7 +27,7 @@ func main() {
 	// Start the server.
 	server := &http.Server{
 		Addr:    port,
-		Handler: &SlashHandler{&LogHandler{os.Stdout, router}},
+		Handler: &AuthHandler{&SlashHandler{&LogHandler{os.Stdout, router}}},
 	}
 
 	err := server.ListenAndServe()

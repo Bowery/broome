@@ -3,6 +3,10 @@
 package main
 
 import (
+	"encoding/base64"
+	"fmt"
+	"github.com/Bowery/broome/db"
+	"github.com/Bowery/broome/util"
 	"io"
 	"net/http"
 	"strconv"
@@ -12,10 +16,77 @@ import (
 
 // NotFoundHandler just responds with a 404 and a message.
 var NotFoundHandler = http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-	res := NewResponder(rw, req)
+	res := &Responder{rw, req, map[string]interface{}{}}
 	res.Body["error"] = http.StatusText(http.StatusNotFound)
 	res.Send(http.StatusNotFound)
 })
+
+// AuthHandler is a http.Handler that checks token is valid
+type AuthHandler struct {
+	Handler http.Handler
+}
+
+func ForceLogin(rw http.ResponseWriter) {
+	rw.Header().Set("WWW-Authenticate", "Basic realm=\"localhost\"")
+	http.Error(rw, http.StatusText(401), 401)
+}
+
+func (ah *AuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	h, ok := req.Header["Authorization"]
+
+	if !ok || len(h) == 0 {
+		ForceLogin(rw)
+		return
+	}
+
+	parts := strings.SplitN(h[0], " ", 2)
+	scheme := parts[0]
+	if scheme != "Basic" {
+		fmt.Println("Auth type is not supported")
+		ForceLogin(rw)
+		return
+	}
+
+	b, err := base64.StdEncoding.DecodeString(parts[1])
+	if err != nil {
+		fmt.Println(err)
+		ForceLogin(rw)
+		return
+	}
+
+	credentials := strings.Split(string(b), ":")
+	if len(credentials) != 2 {
+		fmt.Println("Auth Failed: Credential Format Invalid")
+		ForceLogin(rw)
+		return
+	}
+
+	username := credentials[0]
+	password := credentials[1]
+	query := map[string]interface{}{}
+
+	if password == "" {
+		query["token"] = username
+	} else {
+		query["email"] = username
+	}
+
+	dev, err := db.GetDeveloper(query)
+	if err != nil || dev.ID == "" {
+		fmt.Println("Auth Failed: User not found.")
+		ForceLogin(rw)
+		return
+	}
+
+	if dev.Password != util.HashPassword(password, dev.Salt) {
+		fmt.Println("Auth Failed: Invalid Password.")
+		ForceLogin(rw)
+		return
+	}
+
+	fmt.Println(dev)
+	ah.Handler.ServeHTTP(rw, req)
+}
 
 // SlashHandler is a http.Handler that removes trailing slashes.
 type SlashHandler struct {

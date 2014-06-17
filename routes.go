@@ -4,14 +4,14 @@ package main
 
 import (
 	"fmt"
+	"github.com/Bowery/broome/db"
+	"github.com/Bowery/broome/util"
+	"github.com/bradrydzewski/go.stripe"
+	"github.com/gorilla/mux"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/Bowery/broome/db"
-	"github.com/bradrydzewski/go.stripe"
-	"github.com/gorilla/mux"
 )
 
 // 32 MB, same as http.
@@ -30,10 +30,13 @@ type Route struct {
 var Routes = []*Route{
 	&Route{"/", []string{"GET"}, HomeHandler},
 	&Route{"/developers", []string{"GET"}, AdminHandler},
+	&Route{"/developers", []string{"POST"}, CreateDeveloperHandler},
+	&Route{"/developers/{token}", []string{"GET"}, DeveloperInfoHandler},
+	&Route{"/developers/new", []string{"GET"}, NewDevHandler},
 	&Route{"/signup/{id}", []string{"GET"}, SignUpHandler},
 	&Route{"/thanks!", []string{"GET"}, ThanksHandler},
 	&Route{"/healthz", []string{"GET"}, HealthzHandler},
-	&Route{"/static/{rest}", []string{"GET"}, http.StripPrefix("/static/", http.FileServer(http.Dir(STATIC_DIR))).ServeHTTP},
+	&Route{"/static/{rest}", []string{"GET"}, StaticHandler},
 }
 
 func init() {
@@ -55,10 +58,50 @@ func HomeHandler(rw http.ResponseWriter, req *http.Request) {
 
 // GET /developers, Admin Interface that lists developers
 func AdminHandler(rw http.ResponseWriter, req *http.Request) {
-	ds, _ := db.GetDevelopers(map[string]interface{}{})
+	ds, err := db.GetDevelopers(map[string]interface{}{})
+	if err != nil {
+		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
+		return
+	}
+
 	if err := RenderTemplate(rw, "admin", map[string][]*db.Developer{
 		"Developers": ds,
 	}); err != nil {
+		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
+	}
+}
+
+// GET /developers/{token}, Admin Interface for a single developer
+func DeveloperInfoHandler(rw http.ResponseWriter, req *http.Request) {
+	token := mux.Vars(req)["token"]
+	fmt.Println(token)
+
+	d, err := db.GetDeveloper(map[string]interface{}{"token": token})
+	if err != nil {
+		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
+		return
+	}
+	RenderTemplate(rw, "developer", d)
+}
+
+// POST /developers, Creates a new developer
+func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
+	params := mux.Vars(req)
+	res := NewResponder(rw, req)
+
+	dev := &db.Developer{
+		Name:  params["name"],
+		Email: params["email"],
+	}
+	res.Body["status"] = "todo"
+	res.Body["developer"] = dev
+	res.Send(http.StatusOK)
+
+}
+
+// GET /developers/new, Admin helper for creating developers
+func NewDevHandler(rw http.ResponseWriter, req *http.Request) {
+	if err := RenderTemplate(rw, "new", map[string]string{}); err != nil {
 		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
 	}
 }
@@ -120,14 +163,8 @@ func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
 	u.NextPaymentTime = time.Now().Add(time.Hour * 24 * 30)
 
 	// Hash Password
-	u.Salt, err = HashToken()
-	if err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
-		return
-	}
-	u.Password = HashPassword(req.PostFormValue("password"), u.Salt)
+	u.Salt = util.HashToken()
+	u.Password = util.HashPassword(req.PostFormValue("password"), u.Salt)
 
 	// // Create Stripe Customer
 	customerParams := stripe.CustomerParams{
@@ -257,6 +294,12 @@ func ThanksHandler(w http.ResponseWriter, req *http.Request) {
 		RenderTemplate(w, "error", map[string]string{"Error": err.Error()})
 	}
 }
+
+// GET /healthz, Indicates that the service is up
 func HealthzHandler(res http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(res, "ok")
+}
+
+func StaticHandler(res http.ResponseWriter, req *http.Request) {
+	http.StripPrefix("/static/", http.FileServer(http.Dir(STATIC_DIR))).ServeHTTP(res, req)
 }
