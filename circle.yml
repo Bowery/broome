@@ -1,0 +1,12 @@
+dependencies:
+  pre:
+    - pip install fabric
+    - pip install requests
+test:
+  override:
+    - echo "No Tests.."
+deployment:
+  production:
+    branch: master
+    commands:
+      - fab deploy
