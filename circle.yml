@@ -1,10 +1,10 @@
 dependencies:
-  pre:
+  override:
     - pip install fabric
     - pip install requests
 test:
   override:
-    - echo "No Tests.."
+    - echo "No tests"
 deployment:
   production:
     branch: master
