@@ -64,6 +64,17 @@ function ajax(url, callbackFunction) {
   }
 }
 
+function butterbar (message, type) {
+  type = type && " butterbar-" + type
+
+  document.querySelector('.butterbar .message').innerHTML = message
+  var b = document.getElementsByClassName('butterbar')[0]
+  b.className = "butterbar visible" + type
+  setTimeout(function () {
+    b.className = "butterbar" + type
+  }, 4000)
+}
+
 function validateSignup () {
   var accountInput = document.getElementById("account")
   accountInput.onchange = function (e) {
@@ -93,24 +104,24 @@ function validateSignup () {
   }
 }
 
-// 'routes'
-var routes = {
-  "signup": validateSignup,
-  "home": function () {
-    console.log("you're on the homepage!!!")
-  }
-}
-
-
-// on document ready
-var doc = document
-var dcl = 'DOMContentLoaded'
-var loaded = /^loaded|^i|^c/.test(doc.readyState)
-var listener
-doc.addEventListener(dcl, listener = function () {
-  console.log("Dom Ready!")
-  doc.removeEventListener(dcl, listener)
-
-  for (var route in routes)
-    ~document.body.className.indexOf(route) && routes[route]()
-})
+// // 'routes'
+// var routes = {
+//   "signup": validateSignup,
+//   "home": function () {
+//     console.log("you're on the homepage!!!")
+//   }
+// }
+//
+//
+// // on document ready
+// var doc = document
+// var dcl = 'DOMContentLoaded'
+// var loaded = /^loaded|^i|^c/.test(doc.readyState)
+// var listener
+// doc.addEventListener(dcl, listener = function () {
+//   console.log("Dom Ready!")
+//   doc.removeEventListener(dcl, listener)
+//
+//   for (var route in routes)
+//     ~document.body.className.indexOf(route) && routes[route]()
+// })
