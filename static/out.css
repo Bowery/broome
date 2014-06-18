@@ -235,6 +235,45 @@ input:active {
   padding-top: 10px;
 }
 
+.butterbar {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  margin-left: -320px;
+  text-align: center;
+  width: 58%;
+  max-width: 640px;
+  opacity: 0;
+  -webkit-transition: opacity 0.5s;
+  transition: opacity 0.5s;
+}
+
+.butterbar.visible {
+  opacity: 1;
+}
+
+.butterbar.butterbar-alert .message {
+  border: 1px solid #ad2b2e;
+  border-top: 0;
+  color: #ad2b2e;
+}
+
+.butterbar.butterbar-confirm .message {
+  border: 1px solid rgb(0, 165, 75);
+  border-top: 0;
+  color: rgb(0, 165, 75);
+}
+
+.butterbar .message {
+  -webkit-box-shadow: 0 1px 1px rgba(0,0,0,0.25), 0 0 1px rgba(0,0,0,0.35);
+  box-shadow: 0 1px 1px rgba(0,0,0,0.25), 0 0 1px rgba(0,0,0,0.35);
+  padding: 12px 25px;
+  display: inline-block;
+  border-radius: 0 0 4px 4px;
+  margin: 0;
+  background: white;
+}
+
 @media only screen and (max-device-width: 480px) {
   .container {
     width: 100%;

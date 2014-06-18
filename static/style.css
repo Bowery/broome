@@ -1,6 +1,7 @@
 :root {
   --accent-color: #ff9933;
   --red: #ad2b2e; /* TODO thebyrd find red that matches yellow */
+  --green: rgb(0, 165, 75);
   --grey-dark: #444;
   --grey: #c2c2c2;
 
@@ -208,6 +209,39 @@ input:focus, input:active {
 }
 .group-title h1 {
   padding-top: 10px;
+}
+
+.butterbar {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  margin-left: -320px;
+  text-align: center;
+  width: 58%;
+  max-width: 640px;
+  opacity: 0;
+  transition: opacity 0.5s
+}
+.butterbar.visible {
+  opacity: 1;
+}
+.butterbar.butterbar-alert .message {
+  border: 1px solid var(--red);
+  border-top: 0;
+  color: var(--red);
+}
+.butterbar.butterbar-confirm .message {
+  border: 1px solid var(--green);
+  border-top: 0;
+  color: var(--green);
+}
+.butterbar .message {
+  box-shadow: 0 1px 1px rgba(0,0,0,0.25), 0 0 1px rgba(0,0,0,0.35);
+  padding: 12px 25px;
+  display: inline-block;
+  border-radius: 0 0 4px 4px;
+  margin: 0;
+  background: white;
 }
 
 @media only screen and (max-device-width: 480px) {
