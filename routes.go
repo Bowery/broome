@@ -36,6 +36,7 @@ var Routes = []*Route{
 	&Route{"/", []string{"GET"}, HomeHandler},
 	&Route{"/developers", []string{"GET"}, AdminHandler},
 	&Route{"/developers", []string{"POST"}, CreateDeveloperHandler},
+	&Route{"/developers/{token}", []string{"PUT"}, DeveloperEditHandler},
 	&Route{"/developers/{token}", []string{"GET"}, DeveloperInfoHandler},
 	&Route{"/developers/new", []string{"GET"}, NewDevHandler},
 	&Route{"/signup/{id}", []string{"GET"}, SignUpHandler},
@@ -89,6 +90,68 @@ func DeveloperInfoHandler(rw http.ResponseWriter, req *http.Request) {
 	RenderTemplate(rw, "developer", d)
 }
 
+// PUT /developers/{token}, edits a developer
+func DeveloperEditHandler(rw http.ResponseWriter, req *http.Request) {
+	res := NewResponder(rw, req)
+	params := mux.Vars(req)
+	token := params["token"]
+	if token == "" {
+		res.Body["status"] = "failed"
+		res.Body["error"] = "missing token"
+		res.Send(http.StatusBadRequest)
+		return
+	}
+
+	if err := req.ParseForm(); err != nil {
+		res.Body["status"] = "failed"
+		res.Body["error"] = err.Error()
+		res.Send(http.StatusBadRequest)
+		return
+	}
+
+	query := map[string]interface{}{}
+	query["token"] = token
+	update := map[string]interface{}{}
+
+	dev, err := db.GetDeveloper(query)
+	if err != nil {
+		res.Body["status"] = "failed"
+		res.Send(http.StatusInternalServerError)
+		return
+	}
+
+	if password := req.FormValue("password"); password != "" {
+		update["password"] = util.HashPassword(password, dev.Salt)
+	}
+
+	if isAdmin := req.FormValue("isAdmin"); isAdmin == "true" {
+		update["isAdmin"] = true
+	} else {
+		update["isAdmin"] = false
+	}
+
+	// TODO add datetime parsing
+	for _, field := range []string{"name", "email", "nextPaymentTime", "integrationEngineer"} {
+		val := req.FormValue(field)
+		if val != "" {
+			update[field] = val
+		}
+	}
+
+	fmt.Print("update -> ")
+	fmt.Println(update)
+
+	if err := db.UpdateDeveloper(query, update); err != nil {
+		res.Body["status"] = "failed"
+		res.Send(http.StatusInternalServerError)
+		return
+	}
+
+	res.Body["status"] = "updated"
+	res.Body["update"] = update
+	res.Send(http.StatusOK)
+}
+
 // POST /developers, Creates a new developer
 func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	params := mux.Vars(req)
@@ -97,7 +160,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	dev := &db.Developer{
 		Name:  params["name"],
 		Email: params["email"],
-	}
+	} // password?
 
 	// Post to slack
 	if os.Getenv("ENV") == "production" {

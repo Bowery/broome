@@ -84,3 +84,7 @@ func GetDeveloper(query bson.M) (*Developer, error) {
 	d := &Developer{}
 	return d, developers.Find(query).One(d)
 }
+
+func UpdateDeveloper(query, update bson.M) error {
+	return developers.Update(query, bson.M{"$set": update})
+}

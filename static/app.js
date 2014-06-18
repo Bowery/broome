@@ -65,7 +65,7 @@ function ajax(url, callbackFunction) {
 }
 
 function butterbar (message, type) {
-  type = type && " butterbar-" + type
+  type = type ? " butterbar-" + type : ""
 
   document.querySelector('.butterbar .message').innerHTML = message
   var b = document.getElementsByClassName('butterbar')[0]

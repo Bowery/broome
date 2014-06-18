@@ -158,6 +158,9 @@ input:focus, input:active {
   width: 100%;
   padding: 10px;
 }
+.form .no-show {
+    border: 0;
+}
 
 .group {
   margin: 0;
