@@ -4,16 +4,19 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Bowery/broome/db"
 	"github.com/Bowery/broome/util"
 	"github.com/bradrydzewski/go.stripe"
 	"github.com/gorilla/mux"
+	"github.com/mattbaird/gochimp"
 )
 
 // 32 MB, same as http.
@@ -23,6 +26,8 @@ const (
 )
 
 var STATIC_DIR string = TEMPLATE_DIR
+var chimp *gochimp.ChimpAPI
+var mandrill *gochimp.MandrillAPI
 
 // Route is a single named route with a http.HandlerFunc.
 type Route struct {
@@ -46,13 +51,19 @@ var Routes = []*Route{
 }
 
 func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
+
 	stripeKey := "sk_test_BKnPoMNUWSGHJsLDcSGeV8I9"
+	chimpKey := "923742397a5bf0c8e3efc6d78517911d-us3"
+	mandrillKey := "nYs-WjIVVEAo4ELuda8Elw" // "deMcwBJQFPC7FLeDZwlErg" // "DfJcUPXNJDTYQOYN0jNcGg"
 	var cwd, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 	if os.Getenv("ENV") == "production" {
 		STATIC_DIR = cwd + "/" + STATIC_DIR
 		stripeKey = "sk_live_fx0WR9yUxv6JLyOcawBdNEgj"
 	}
 	stripe.SetKey(stripeKey)
+	chimp = gochimp.NewChimp(chimpKey, true)
+	mandrill, _ = gochimp.NewMandrill(mandrillKey)
 }
 
 // GET /, Introduction to Crosby
@@ -154,13 +165,83 @@ func DeveloperEditHandler(rw http.ResponseWriter, req *http.Request) {
 
 // POST /developers, Creates a new developer
 func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
-	params := mux.Vars(req)
 	res := NewResponder(rw, req)
 
+	type engineer struct {
+		Name  string
+		Email string
+	}
+
+	integrationEngineers := []*engineer{
+		&engineer{Name: "Steve Kaliski", Email: "steve@bowery.io"},
+		&engineer{Name: "David Byrd", Email: "byrd@bowery.io"},
+		&engineer{Name: "Larz Conwell", Email: "larz@bowery.io"},
+		&engineer{Name: "Ricky Medina", Email: "rm@bowery.io"},
+	}
+
+	integrationEngineer := integrationEngineers[rand.Int()%len(integrationEngineers)]
+
+	if err := req.ParseForm(); err != nil {
+		res.Body["status"] = "failed"
+		res.Body["error"] = err.Error()
+		res.Send(http.StatusBadRequest)
+		return
+	}
+
 	dev := &db.Developer{
-		Name:  params["name"],
-		Email: params["email"],
-	} // password?
+		Name:                req.FormValue("name"),
+		Email:               req.FormValue("email"),
+		IntegrationEngineer: integrationEngineer.Name,
+	}
+
+	if dev.Email != "" {
+		if _, err := chimp.ListsSubscribe(gochimp.ListsSubscribe{
+			ListId: "200e892f56",
+			Email:  gochimp.Email{Email: dev.Email},
+		}); err != nil {
+			res.Body["status"] = "failed"
+			res.Body["error"] = err.Error()
+			res.Send(http.StatusBadRequest)
+			return
+		}
+
+		message, err := RenderEmail("welcome", map[string]interface{}{
+			"name":     strings.Split(dev.Name, " ")[0],
+			"engineer": integrationEngineer,
+		})
+
+		if err != nil {
+			res.Body["status"] = "failed"
+			res.Body["error"] = err.Error()
+			res.Send(http.StatusBadRequest)
+			return
+		}
+
+		rec, err := mandrill.MessageSend(gochimp.Message{
+			Subject:   "Welcome and meet your integration engineer",
+			FromEmail: integrationEngineer.Email,
+			FromName:  integrationEngineer.Name,
+			To: []gochimp.Recipient{{
+				Email: dev.Email,
+				Name:  dev.Name,
+			}},
+			Html: message,
+		}, false)
+
+		if err != nil {
+			res.Body["status"] = "failed"
+			res.Body["error"] = err.Error()
+			res.Send(http.StatusBadRequest)
+			return
+		}
+	}
+
+	if err := dev.Save(); err != nil {
+		res.Body["status"] = "failed"
+		res.Body["err"] = err.Error()
+		res.Send(http.StatusBadRequest)
+		return
+	}
 
 	// Post to slack
 	if os.Getenv("ENV") == "production" {
@@ -172,10 +253,9 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 		http.PostForm("https://slack.com/api/chat.postMessage", payload)
 	}
 
-	res.Body["status"] = "todo"
+	res.Body["status"] = "saved"
 	res.Body["developer"] = dev
 	res.Send(http.StatusOK)
-
 }
 
 // GET /developers/new, Admin helper for creating developers

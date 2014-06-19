@@ -79,3 +79,9 @@ func RenderTemplate(wr io.Writer, name string, data interface{}) error {
 	}
 	return tmpl.Execute(wr, data)
 }
+
+func RenderEmail(name string, data interface{}) (string, error) {
+	html, err := execute(name, data)
+
+	return html.String(), err
+}
