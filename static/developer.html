@@ -1,5 +1,35 @@
+<script src="/static/developer.js" async></script>
+
 <div class="group group-developer">
-  <h1>{{.Name}}</h1>
-  <h2>{{.Email}}</h2>
+  <form class="form" data-token="{{.Token}}">
+    <div class="form-group">
+      <h1><input type="text" name="name" class="no-show" value="{{.Name}}" id="dev-name"></h1>
+    </div>
+    <div class="form-group">
+      <input class="no-show" type="text" name="email" value="{{.Email}}" id="dev-email">
+    </div>
+    <div class="form-group">
+      <input class="no-show" type="password" name="password" placeholder="some password" id="dev-password">
+    </div>
+    <div class="form-group">
+      <input class="no-show" type="password" name="confirm_password" placeholder="confirm your new password" id="dev-confirm_password">
+    </div>
+    <div class="form-group">
+      <label> is admin
+        <input type="checkbox" name="is-admin" id="dev-is_admin" {{if .IsAdmin}}checked{{end}}>
+      </label>
+    </div>
+    <div class="form-group">
+      <label> next payment time:<br>{{.NextPaymentTime}}
+        <input class="no-show" type="datetime-local" name="next-payment-time" value="{{.NextPaymentTime}}" id="dev-next_payment_time">
+      </label>
+    </div>
+    <div class="form-group">
+      <label> integration engineer:
+        <input class="no-show" type="text" name="integration-engineer" value="{{.IntegrationEngineer}}" id="dev-integration_engineer">
+      </label>
+    </div>
+    <input class="btn btn-default" type="submit" value="Submit" name="submit" id="dev-submit">
+  </form>
   <a href="/developers">&larr; Back to Admin</a>
 </div>
