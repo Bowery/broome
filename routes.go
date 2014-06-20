@@ -25,9 +25,11 @@ const (
 	slackToken = "xoxp-2157690968-2174706611-2385261803-c58929"
 )
 
-var STATIC_DIR string = TEMPLATE_DIR
-var chimp *gochimp.ChimpAPI
-var mandrill *gochimp.MandrillAPI
+var (
+	STATIC_DIR string = TEMPLATE_DIR
+	chimp      *gochimp.ChimpAPI
+	mandrill   *gochimp.MandrillAPI
+)
 
 // Route is a single named route with a http.HandlerFunc.
 type Route struct {
@@ -217,8 +219,8 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		rec, err := mandrill.MessageSend(gochimp.Message{
-			Subject:   "Welcome and meet your integration engineer",
+		_, err = mandrill.MessageSend(gochimp.Message{
+			Subject:   "Welcome and Meet Your Integration Engineer",
 			FromEmail: integrationEngineer.Email,
 			FromName:  integrationEngineer.Name,
 			To: []gochimp.Recipient{{
