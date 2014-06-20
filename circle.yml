@@ -4,7 +4,7 @@ dependencies:
     - pip install requests
 test:
   override:
-    - cd /home/ubuntu/.go_workspace/src/github.com/Bowery/broome/ && make test
+    - make circleci
 deployment:
   production:
     branch: master
