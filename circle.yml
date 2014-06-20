@@ -4,6 +4,7 @@ dependencies:
     - pip install requests
 test:
   override:
+    - cd .go_workspace/src/github.com/Bowery/broome/
     - make test
 deployment:
   production:
