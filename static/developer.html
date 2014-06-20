@@ -3,33 +3,30 @@
 <div class="group group-developer">
   <form class="form" data-token="{{.Token}}">
     <div class="form-group">
-      <h1><input type="text" name="name" class="no-show" value="{{.Name}}" id="dev-name"></h1>
+      <label>name:</label>
+      <input type="text" name="name" class="no-show name" value="{{.Name}}">
     </div>
     <div class="form-group">
-      <input class="no-show" type="text" name="email" value="{{.Email}}" id="dev-email">
+      <label>email:</label>
+      <input class="no-show email" type="text" name="email" value="{{.Email}}">
     </div>
     <div class="form-group">
-      <input class="no-show" type="password" name="password" placeholder="some password" id="dev-password">
+      <label>password:</label>
+      <input class="no-show password" type="password" name="password" placeholder="some password">
+      <input class="no-show password" type="password" name="confirm-password" placeholder="confirm your new password">
     </div>
     <div class="form-group">
-      <input class="no-show" type="password" name="confirm_password" placeholder="confirm your new password" id="dev-confirm_password">
+      <label>admin access:</label>
+      <input class="is-admin" type="checkbox" name="isAdmin" checked>
     </div>
     <div class="form-group">
-      <label> is admin
-        <input type="checkbox" name="is-admin" id="dev-is_admin" {{if .IsAdmin}}checked{{end}}>
-      </label>
+      <label>next payment time:</label>
+      <input class="no-show next-payment" type="datetime" name="nextPaymentTime" value={{.NextPaymentTime}} />
     </div>
     <div class="form-group">
-      <label> next payment time:<br>{{.NextPaymentTime}}
-        <input class="no-show" type="datetime-local" name="next-payment-time" value="{{.NextPaymentTime}}" id="dev-next_payment_time">
-      </label>
+      <label> integration engineer:</label>
+      <input class="no-show integration-engineer" type="text" name="integrationEngineer" value="{{.IntegrationEngineer}}">
     </div>
-    <div class="form-group">
-      <label> integration engineer:
-        <input class="no-show" type="text" name="integration-engineer" value="{{.IntegrationEngineer}}" id="dev-integration_engineer">
-      </label>
-    </div>
-    <input class="btn btn-default" type="submit" value="Submit" name="submit" id="dev-submit">
+    <input class="btn btn-default btn-submit" type="submit" value="Submit" name="submit">
   </form>
-  <a href="/developers">&larr; Back to Admin</a>
 </div>

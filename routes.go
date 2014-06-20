@@ -36,7 +36,7 @@ var Routes = []*Route{
 	&Route{"/", []string{"GET"}, HomeHandler},
 	&Route{"/developers", []string{"GET"}, AdminHandler},
 	&Route{"/developers", []string{"POST"}, CreateDeveloperHandler},
-	&Route{"/developers/{token}", []string{"PUT"}, DeveloperEditHandler},
+	&Route{"/developers/{token}", []string{"PUT"}, UpdateDeveloperHandler},
 	&Route{"/developers/{token}", []string{"GET"}, DeveloperInfoHandler},
 	&Route{"/developers/new", []string{"GET"}, NewDevHandler},
 	&Route{"/signup/{id}", []string{"GET"}, SignUpHandler},
@@ -80,21 +80,28 @@ func AdminHandler(rw http.ResponseWriter, req *http.Request) {
 // GET /developers/{token}, Admin Interface for a single developer
 func DeveloperInfoHandler(rw http.ResponseWriter, req *http.Request) {
 	token := mux.Vars(req)["token"]
-	fmt.Println(token)
-
 	d, err := db.GetDeveloper(map[string]interface{}{"token": token})
 	if err != nil {
 		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
 		return
 	}
-	RenderTemplate(rw, "developer", d)
+
+	marshalledTime, _ := d.NextPaymentTime.MarshalJSON()
+
+	RenderTemplate(rw, "developer", map[string]interface{}{
+		"Token":               d.Token,
+		"Name":                d.Name,
+		"Email":               d.Email,
+		"IsAdmin":             d.IsAdmin,
+		"NextPaymentTime":     string(marshalledTime[1 : len(marshalledTime)-1]), // trim inexplainable quotes and Z at the end that breaks shit
+		"IntegrationEngineer": d.IntegrationEngineer,
+	})
 }
 
 // PUT /developers/{token}, edits a developer
-func DeveloperEditHandler(rw http.ResponseWriter, req *http.Request) {
+func UpdateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	res := NewResponder(rw, req)
-	params := mux.Vars(req)
-	token := params["token"]
+	token := mux.Vars(req)["token"]
 	if token == "" {
 		res.Body["status"] = "failed"
 		res.Body["error"] = "missing token"
@@ -124,22 +131,21 @@ func DeveloperEditHandler(rw http.ResponseWriter, req *http.Request) {
 		update["password"] = util.HashPassword(password, dev.Salt)
 	}
 
-	if isAdmin := req.FormValue("isAdmin"); isAdmin == "true" {
-		update["isAdmin"] = true
-	} else {
-		update["isAdmin"] = false
+	if nextPaymentTime := req.FormValue("nextPaymentTime"); nextPaymentTime != "" {
+		update["nextPaymentTime"], err = time.Parse(time.RFC3339, nextPaymentTime)
+	}
+
+	if isAdmin := req.FormValue("isAdmin"); isAdmin != "" {
+		update["isAdmin"] = isAdmin == "on" || isAdmin == "true"
 	}
 
 	// TODO add datetime parsing
-	for _, field := range []string{"name", "email", "nextPaymentTime", "integrationEngineer"} {
+	for _, field := range []string{"name", "email", "integrationEngineer"} {
 		val := req.FormValue(field)
 		if val != "" {
 			update[field] = val
 		}
 	}
-
-	fmt.Print("update -> ")
-	fmt.Println(update)
 
 	if err := db.UpdateDeveloper(query, update); err != nil {
 		res.Body["status"] = "failed"
@@ -291,64 +297,6 @@ func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
 	res.Body["status"] = "success"
 	res.Body["user"] = u
 	res.Send(http.StatusOK)
-}
-
-// GET /session/{id}, Gets user by ID. If their license has expired it attempts
-// to charge them again. It is called everytime crosby is run.
-func SessionHandler(rw http.ResponseWriter, req *http.Request) {
-	res := NewResponder(rw, req)
-
-	id := mux.Vars(req)["id"]
-	fmt.Println("Getting user by id", id)
-	u, err := db.GetDeveloperById(id)
-	if err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
-		return
-	}
-
-	if u.NextPaymentTime.After(time.Now()) {
-		res.Body["status"] = "found"
-		res.Body["user"] = u
-		res.Send(http.StatusOK)
-		return
-	}
-
-	if u.StripeToken == "" {
-		res.Body["status"] = "expired"
-		res.Body["user"] = u
-		res.Send(http.StatusOK)
-		return
-	}
-
-	// Charge them, update expiration, & respond with found.
-	// Charge Stripe Customer
-	chargeParams := stripe.ChargeParams{
-		Desc:     "Crosby Annual License",
-		Amount:   2500,
-		Currency: "usd",
-		Customer: u.StripeToken,
-	}
-	_, err = stripe.Charges.Create(&chargeParams)
-	if err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
-		return
-	}
-	u.NextPaymentTime = time.Now()
-	if err := u.Save(); err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
-		return
-	}
-
-	res.Body["status"] = "found"
-	res.Body["user"] = u
-	res.Send(http.StatusOK)
-	return
 }
 
 // GET /signup/:id, Renders signup find. Will also handle billing

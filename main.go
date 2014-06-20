@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-func main() {
+func Handler() http.Handler {
 	router := mux.NewRouter()
 	router.NotFoundHandler = NotFoundHandler
 
@@ -18,6 +18,10 @@ func main() {
 		route.Path(r.Path).Methods(r.Methods...)
 		route.HandlerFunc(r.Handler)
 	}
+	return &AuthHandler{&SlashHandler{&LogHandler{os.Stdout, router}}}
+}
+
+func main() {
 
 	port := ":4000"
 	if os.Getenv("ENV") == "production" {
@@ -27,7 +31,7 @@ func main() {
 	// Start the server.
 	server := &http.Server{
 		Addr:    port,
-		Handler: &AuthHandler{&SlashHandler{&LogHandler{os.Stdout, router}}},
+		Handler: Handler(),
 	}
 
 	err := server.ListenAndServe()

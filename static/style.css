@@ -120,7 +120,7 @@ pre.code {
 }
 
 .form {
-  max-width: 285px;
+  max-width: 100%;
 }
 .form .form-group {
   width: 100%;
@@ -128,6 +128,14 @@ pre.code {
 }
 .form-group label, .form-group input {
   display: inline;
+  width: 100%;
+}
+.form-group input[type="checkbox"] {
+  width: 14px;
+}
+.form-group input {
+  font-family: "museo-sans-rounded", sans-serif;
+  font-size: 28px;
 }
 input:focus, input:active {
   outline: none;
@@ -229,12 +237,10 @@ input:focus, input:active {
   opacity: 1;
 }
 .butterbar.butterbar-alert .message {
-  border: 1px solid var(--red);
   border-top: 0;
   color: var(--red);
 }
 .butterbar.butterbar-confirm .message {
-  border: 1px solid var(--green);
   border-top: 0;
   color: var(--green);
 }

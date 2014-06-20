@@ -1,61 +1,40 @@
-var DevController = function () {}
+// Copyright 2014 Bowery, Inc.
+/**
+ * Manages Developer Lyfesykal
+ * @constructor
+ */
+function DevController () {
+  // memoization ftw
+  this.formEl = $('.group-developer .form')
 
-// constructs the url for editing a dev, adds the event listener to the submit button
-DevController.prototype.init = function () {
-  var self = this
-
-  try {
-    this.editUrl = '/developers/' + document.getElementsByTagName('form')[0].getAttribute('data-token')
-  } catch (err) {
-    butterbar('no form found', 'alert')
-  }
-
-  document.querySelector('#dev-submit').addEventListener('click', function(e) {
-    e.preventDefault()
-
-    self.editDev()
-  })
+  this.editUrl = '/developers/' + this.formEl.data('token')
+  console.log(this.editUrl)
+  $('.group-developer .btn-submit').click(this.editDev.bind(this))
 }
 
-// grabs all the information in the form and submits it
-DevController.prototype.editDev = function (cb) {
-  var request = new XMLHttpRequest
+/**
+ * Grabs all the information in the form and submits it.
+ * @param {Event} e
+ */
+DevController.prototype.editDev = function (e) {
+  e.preventDefault()
 
-  var password = document.querySelector('#dev-password').value
-  if (password != document.querySelector('#dev-confirm_password').value) {
-    butterbar('passwords don\'t match', 'alert')
-    return
-  }
+  var ps = document.getElementsByClassName("password")
+  if (ps[0].value != ps[1].value)
+    return butterbar("passwords don't match", "alert")
 
-  var data = {
-    name: document.querySelector('#dev-name').value,
-    email: document.querySelector('#dev-email').value,
-    password: password,
-    nextPaymentTime: document.querySelector('#dev-next_payment_time').value,
-    integrationEngineer: document.querySelector('#dev-integration_engineer').value
-  }
-
-  for (var field in data)
-    if (!data[field])
-      delete data[field]
-
-  data.isAdmin = document.querySelector('#dev-is_admin').checked
-
-  $.ajax({
+  var data = $(this.formEl).serialize()
+  console.log(data)
+  var payload = {
     url: this.editUrl,
     type: 'PUT',
     data: data
-  })
-    .done(function(data) {
-      butterbar('success', 'confirm')
-    })
-    .error(function(err) {
-      console.log('update failed', 'alert')
-    })
+  }
+  $.ajax(payload)
+    .done(butterbar.bind(this, 'Update Successful.', 'confirm'))
+    .error(butterbar.bind(this, 'Update Failed.', 'alert'))
 }
 
-var devController = new DevController()
-
-window.addEventListener('load', function() {
-  devController.init()
-}, false)
+$(document).ready(function () {
+  var dc = new DevController()
+})
