@@ -48,6 +48,7 @@ func (ah *AuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	h, ok := req.Header["Authorization"]
 	if !ok || len(h) == 0 {
+		fmt.Println("here1")
 		ForceLogin(rw)
 		return
 	}
@@ -77,7 +78,6 @@ func (ah *AuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	username := credentials[0]
 	password := credentials[1]
 	query := map[string]interface{}{}
-
 	if password == "" {
 		query["token"] = username
 	} else {
@@ -91,7 +91,7 @@ func (ah *AuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if dev.Password != util.HashPassword(password, dev.Salt) {
+	if password != "" && dev.Password != util.HashPassword(password, dev.Salt) {
 		fmt.Println("Auth Failed: Invalid Password.")
 		ForceLogin(rw)
 		return
