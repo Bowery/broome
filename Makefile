@@ -14,8 +14,18 @@ format:
 	@echo "--> Running go fmt"
 	@go fmt $(PACKAGES)
 
+circleci:
+	mkdir -p  /home/ubuntu/.go_workspace/src/github.com/Bowery/
+	git clone git@github.com:Bowery/broome.git
+	cd broome
+	go test
+	cd db
+	go test
+	cd ../util
+	go test
+
 test: deps
-	go list ./... | xargs -n1 go test
+	go list ./... | xargs -n1 go test #  too fancy for circleci
 
 clean:
 	rm -rf crosby/pkg
