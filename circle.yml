@@ -4,7 +4,9 @@ dependencies:
     - pip install requests
 test:
   override:
-    - echo "No tests"
+    - mkdir -p /home/ubuntu/.go_workspace/src/github.com/Bowery
+    - cp -r /home/ubuntu/broome /home/ubuntu/.go_workspace/src/github.com/Bowery/broome
+    - cd /home/ubuntu/.go_workspace/src/github.com/Bowery/broome && go get && go test ./...
 deployment:
   production:
     branch: master
