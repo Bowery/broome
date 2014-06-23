@@ -10,7 +10,9 @@ import (
 	"path/filepath"
 )
 
-var TEMPLATE_DIR string = "static"
+var (
+	TEMPLATE_DIR string = "static"
+)
 
 func execute(name string, data interface{}) (*bytes.Buffer, error) {
 	fmt.Println("executed template", name, "with data:", data)
@@ -78,4 +80,13 @@ func RenderTemplate(wr io.Writer, name string, data interface{}) error {
 		return err
 	}
 	return tmpl.Execute(wr, data)
+}
+
+func RenderEmail(name string, data interface{}) (string, error) {
+	html, err := execute(name, data)
+	if err != nil {
+		return "", err
+	}
+
+	return html.String(), nil
 }
