@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Bowery/bowery/requests"
 	"github.com/Bowery/broome/db"
 	"github.com/Bowery/broome/util"
 	"github.com/bradrydzewski/go.stripe"
@@ -195,21 +196,33 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 
 	integrationEngineer := integrationEngineers[rand.Int()%len(integrationEngineers)]
 
-	if err := req.ParseForm(); err != nil {
+	var body requests.LoginReq
+
+	decoder := json.NewDecoder(req.Body)
+	err := decoder.Decode(&body)
+	if err != nil {
 		res.Body["status"] = "failed"
 		res.Body["error"] = err.Error()
 		res.Send(http.StatusBadRequest)
 		return
 	}
 
+	if body.Email == "" || body.Password == "" {
+		res.Body["status"] = "failed"
+		res.Body["error"] = "Email and Password Required."
+		res.Send(http.StatusBadRequest)
+		return
+	}
+
 	u := &db.Developer{
-		Name:                req.FormValue("name"),
-		Email:               req.FormValue("email"),
+		Name:                body.Name,
+		Email:               body.Email,
+		Password:            body.Password,
 		IntegrationEngineer: integrationEngineer.Name,
 		IsPaid:              false,
 	}
 
-	if u.Email != "" {
+	if os.Getenv("ENV") == "production" { // already checked that email wasn't empty
 		if _, err := chimp.ListsSubscribe(gochimp.ListsSubscribe{
 			ListId: "200e892f56",
 			Email:  gochimp.Email{Email: u.Email},
@@ -268,8 +281,9 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 		http.PostForm("https://slack.com/api/chat.postMessage", payload)
 	}
 
-	res.Body["status"] = "saved"
+	res.Body["status"] = "created"
 	res.Body["developer"] = u
+
 	res.Send(http.StatusOK)
 }
 
@@ -283,10 +297,7 @@ func NewDevHandler(rw http.ResponseWriter, req *http.Request) {
 // POST /developer/token, logs in a user by creating a new token
 func CreateTokenHandler(rw http.ResponseWriter, req *http.Request) {
 	res := NewResponder(rw, req)
-	var body struct {
-		Email    string
-		Password string
-	}
+	var body requests.LoginReq
 	decoder := json.NewDecoder(req.Body)
 	err := decoder.Decode(&body)
 	if err != nil {

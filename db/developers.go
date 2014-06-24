@@ -33,7 +33,7 @@ type Developer struct {
 }
 
 func init() {
-	dbAddr := "localhost"
+	dbAddr := "10.0.0.15:27017"
 	if os.Getenv("ENV") == "production" {
 		dbAddr = "ec2-54-196-181-224.compute-1.amazonaws.com"
 	}
