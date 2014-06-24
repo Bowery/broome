@@ -16,9 +16,13 @@ func Handler() http.Handler {
 	for _, r := range Routes {
 		route := router.NewRoute()
 		route.Path(r.Path).Methods(r.Methods...)
+		if r.Auth {
+			h := &AuthHandler{r.Handler}
+			r.Handler = h.ServeHTTP
+		}
 		route.HandlerFunc(r.Handler)
 	}
-	return &AuthHandler{&SlashHandler{&LogHandler{os.Stdout, router}}}
+	return &SlashHandler{&LogHandler{os.Stdout, router}}
 }
 
 func main() {

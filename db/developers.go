@@ -20,14 +20,15 @@ type Developer struct {
 	ID                  bson.ObjectId `bson:"_id,omitempty"json:"_id,omitempty"`
 	Name                string        `bson:"name,omitempty"json:"name,omitempty"`
 	Email               string        `bson:"email,omitempty"json:"email,omitempty"`
-	Password            string        `bson:"password,omitempty"json:"password,omitempty"`
-	Salt                string        `bson:"salt,omitempty"json:"salt,omitempty"`
+	Password            string        `bson:"password,omitempty"json:"-,omitempty"`
+	Salt                string        `bson:"salt,omitempty"json:"-,omitempty"`
 	Token               string        `bson:"token,omitempty"json:"token,omitempty"`
 	IsAdmin             bool          `bson:"isAdmin,omitempty"json:"isAdmin,omitempty"`
+	IsPaid              bool          `bson"isPaid,omitempty"json:"isPaid,omitempty"`
 	StripeToken         string        `bson:"stripeToken,omitempty"json:"stripeToken,omitempty"`
 	NextPaymentTime     time.Time     `bson:"nextPaymentTime,omitempty"json:"nextPaymentTime,omitempty"`
 	IntegrationEngineer string        `bson:"integrationEngineer,omitempty"json:"integrationEngineer,omitempty"`
-	CreatedAt           time.Time     `bson:"createdAt,omitempty"json:"createdAt,omitempty"`
+	CreatedAt           int64         `bson:"createdAt,omitempty"json:"createdAt,omitempty"`
 	LastActiveAt        time.Time     `bson:"lastActiveAt,omitempty"json:"lastActiveAt,omitempty"`
 }
 

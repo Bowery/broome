@@ -1,14 +1,20 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
-	"github.com/Bowery/broome/db"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"reflect"
 	"testing"
+
+	"labix.org/v2/mgo/bson"
+
+	"github.com/Bowery/broome/db"
+	"github.com/Bowery/broome/requests"
 )
 
 var broomeServer http.HandlerFunc = Handler().ServeHTTP
@@ -106,5 +112,161 @@ func TestUpdateDeveloperHandler(t *testing.T) {
 
 	if reflect.DeepEqual(body["update"], req.PostForm) {
 		t.Fatal("response update is not the same as request update", body["update"], req.PostForm)
+	}
+}
+
+func TestCreateTokenHandler(t *testing.T) {
+	_, err := db.MockDB()
+	if err != nil {
+		t.Fatal("Could not Mock DB:", err)
+	}
+
+	var body bytes.Buffer
+	bodyReq := map[string]interface{}{"Email": "byrd@bowery.io", "Password": "java$cript"}
+
+	encoder := json.NewEncoder(&body)
+	err = encoder.Encode(bodyReq)
+	if err != nil {
+		t.Fatal("Could not encode JSON:", err)
+	}
+
+	req, err := http.NewRequest("POST", "http://broome.io/developers/token", &body)
+	if err != nil {
+		t.Fatal("Could not create request:", err)
+	}
+	defer req.Body.Close()
+
+	res := httptest.NewRecorder()
+	broomeServer(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("Non-expected status code: %v\tbody: %v", res.Code, res.Body)
+	}
+
+	resBody := map[string]interface{}{}
+	if err := json.Unmarshal([]byte(res.Body.String()), &resBody); err != nil {
+		t.Fatal("Response is not valid JSON", err)
+	}
+
+	if resBody["status"] != "created" {
+		t.Fatal("response status should be 'created' not ", resBody["status"])
+	}
+}
+
+func TestDeveloperMeHandler(t *testing.T) {
+	mock, err := db.MockDB()
+	if err != nil {
+		t.Fatal("Could not Mock DB:", err)
+	}
+
+	var token string
+	var ok bool
+	if token, ok = mock["token"].(string); !ok {
+		t.Fatal("Token not a string")
+	}
+
+	req, err := http.NewRequest("GET", "http://broome.io/developers/me?token="+token, nil)
+	if err != nil {
+		t.Fatal("Could not Create Request", err)
+	}
+
+	res := httptest.NewRecorder()
+	broomeServer(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("Non-expected status code: %v\tbody: %v", res.Code, res.Body)
+	}
+
+	body := &requests.DeveloperRes{}
+	if err := json.Unmarshal([]byte(res.Body.String()), body); err != nil {
+		t.Fatal("Response is not valid JSON", err)
+	}
+
+	if body.Status != "found" {
+		t.Fatalf("response status should be 'created' not %v. Error: %v ", body.Status, body.Error)
+	}
+
+	var expCreatedAt int64 = 1390922819901
+
+	if body.Developer.CreatedAt != expCreatedAt {
+		t.Fatalf("Developer has changed: Date expected %f but got %d", expCreatedAt, body.Developer.CreatedAt)
+	}
+}
+
+func TestResetRequestHandler(t *testing.T) {
+	mock, err := db.MockDB()
+	if err != nil {
+		t.Fatal("Could not Mock DB:", err)
+	}
+
+	var email string
+	var ok bool
+	if email, ok = mock["email"].(string); !ok {
+		t.Fatal("Email not a string")
+	}
+
+	req, err := http.NewRequest("GET", "http://broome.io/reset/"+email, nil)
+	if err != nil {
+		t.Fatal("Could not create request:", err)
+	}
+
+	res := httptest.NewRecorder()
+	broomeServer(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("Non-expected status code: %v\tbody: %v", res.Code, res.Body)
+	}
+
+	resBody := map[string]interface{}{}
+	if err := json.Unmarshal([]byte(res.Body.String()), &resBody); err != nil {
+		t.Fatal("Response is not valid JSON", err)
+	}
+
+	if resBody["status"] != "success" {
+		t.Fatal("response status should be 'created' not ", resBody["status"])
+	}
+}
+
+func TestPasswordEditHandler(t *testing.T) {
+	mock, err := db.MockDB()
+	if err != nil {
+		t.Fatal("Could not Mock DB:", err)
+	}
+
+	var id bson.ObjectId
+	var ok bool
+	fmt.Printf("%T", mock["_id"])
+	if id, ok = mock["_id"].(bson.ObjectId); !ok {
+		t.Fatal("ID not a bson.ObjectId")
+	}
+
+	var token string
+	if token, ok = mock["token"].(string); !ok {
+		t.Fatal("Token not a string")
+	}
+
+	req, err := http.NewRequest("PUT", "http://broome.io/developers/reset/"+token, nil)
+	if err != nil {
+		t.Fatal("Could not Create Request", err)
+	}
+	req.PostForm = url.Values{
+		"id":  {id.Hex()},
+		"old": {"java$cript"},
+		"new": {"password"},
+	}
+	res := httptest.NewRecorder()
+	broomeServer(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("Non-expected status code: %v\tbody: %v", res.Code, res.Body)
+	}
+
+	body := map[string]interface{}{}
+	if err := json.Unmarshal([]byte(res.Body.String()), &body); err != nil {
+		t.Fatal("Response is not valid JSON", err)
+	}
+
+	if body["status"] != "success" {
+		t.Fatal("response status should be 'updated' not ", body["status"])
 	}
 }
