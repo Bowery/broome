@@ -170,6 +170,10 @@ input:focus, input:active {
     border: 0;
 }
 
+.hidden {
+  display: none!important;
+}
+
 .group {
   margin: 0;
   padding: 40px 0;
