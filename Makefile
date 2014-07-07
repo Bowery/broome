@@ -18,7 +18,7 @@ test: deps
 	go list ./... | xargs -n1 go test
 
 clean:
-	rm -rf crosby/pkg
+	rm -rf broome/pkg
 	rm -rf bin
 
 .PNONY: all deps test format
