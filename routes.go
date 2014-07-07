@@ -563,7 +563,6 @@ func ResetPasswordHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	res.Body["status"] = "success"
-	res.Body["message"] = "email sent"
 	res.Send(http.StatusOK)
 }
 
@@ -580,6 +579,7 @@ func ResetHandler(rw http.ResponseWriter, req *http.Request) {
 
 	if token != u.Token {
 		RenderTemplate(rw, "error", map[string]string{"Error": "Invalid Token"})
+		return
 	}
 
 	if err := RenderTemplate(rw, "password_reset", map[string]interface{}{
