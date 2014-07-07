@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Bowery/bowery/requests"
 	"github.com/Bowery/broome/db"
+	"github.com/Bowery/broome/requests"
 	"github.com/Bowery/broome/util"
 	"github.com/bradrydzewski/go.stripe"
 	"github.com/gorilla/mux"
