@@ -17,3 +17,10 @@ type DeveloperRes struct {
 	*Res
 	Developer *db.Developer `json:"developer"`
 }
+
+// copied from bowery/requests/bodies
+type LoginReq struct {
+	Name     string `json:"name,omitempty"` // Only some use name.
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
