@@ -223,7 +223,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 		IsPaid:              false,
 	}
 
-	if os.Getenv("ENV") == "production" { // already checked that email wasn't empty
+	if os.Getenv("ENV") == "production" && !strings.Contains(body.Email, "@bowery.io") {
 		if _, err := chimp.ListsSubscribe(gochimp.ListsSubscribe{
 			ListId: "200e892f56",
 			Email:  gochimp.Email{Email: u.Email},
@@ -273,7 +273,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// Post to slack
-	if os.Getenv("ENV") == "production" {
+	if os.Getenv("ENV") == "production" && !strings.Contains(body.Email, "@bowery.io") {
 		payload := url.Values{}
 		payload.Set("token", slackToken)
 		payload.Set("channel", "#users")
