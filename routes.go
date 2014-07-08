@@ -218,6 +218,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 		Name:                body.Name,
 		Email:               body.Email,
 		Password:            body.Password,
+		Token:               util.HashToken(),
 		IntegrationEngineer: integrationEngineer.Name,
 		IsPaid:              false,
 	}
