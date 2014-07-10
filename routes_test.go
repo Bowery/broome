@@ -81,9 +81,8 @@ func TestUpdateDeveloperHandler(t *testing.T) {
 	}
 
 	var token string
-	var ok bool
-	if token, ok = mock["token"].(string); !ok {
-		t.Fatal("Token not a string")
+	if token = mock.Token; token == "" {
+		t.Fatal("No token")
 	}
 
 	req, err := http.NewRequest("PUT", "http://broome.io/developers/"+token, nil)
@@ -160,9 +159,8 @@ func TestDeveloperMeHandler(t *testing.T) {
 	}
 
 	var token string
-	var ok bool
-	if token, ok = mock["token"].(string); !ok {
-		t.Fatal("Token not a string")
+	if token = mock.Token; token == "" {
+		t.Fatal("No token.")
 	}
 
 	req, err := http.NewRequest("GET", "http://broome.io/developers/me?token="+token, nil)
@@ -200,9 +198,8 @@ func TestResetRequestHandler(t *testing.T) {
 	}
 
 	var email string
-	var ok bool
-	if email, ok = mock["email"].(string); !ok {
-		t.Fatal("Email not a string")
+	if email = mock.Email; email == "" {
+		t.Fatal("No email")
 	}
 
 	req, err := http.NewRequest("GET", "http://broome.io/reset/"+email, nil)
@@ -234,15 +231,12 @@ func TestPasswordEditHandler(t *testing.T) {
 	}
 
 	var id bson.ObjectId
-	var ok bool
-	fmt.Printf("%T", mock["_id"])
-	if id, ok = mock["_id"].(bson.ObjectId); !ok {
-		t.Fatal("ID not a bson.ObjectId")
-	}
+	fmt.Printf("%T", mock.ID)
+	id = mock.ID
 
 	var token string
-	if token, ok = mock["token"].(string); !ok {
-		t.Fatal("Token not a string")
+	if token = mock.Token; token == "" {
+		t.Fatal("Invalid token")
 	}
 
 	req, err := http.NewRequest("PUT", "http://broome.io/developers/reset/"+token, nil)

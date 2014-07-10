@@ -1,7 +1,7 @@
 package requests
 
 import (
-	"github.com/Bowery/broome/db"
+	"github.com/Bowery/gopackages/schemas"
 )
 
 type Res struct {
@@ -15,7 +15,7 @@ func (res *Res) Error() string {
 
 type DeveloperRes struct {
 	*Res
-	Developer *db.Developer `json:"developer"`
+	Developer *schemas.Developer `json:"developer"`
 }
 
 // copied from bowery/requests/bodies
