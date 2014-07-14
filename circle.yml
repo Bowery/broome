@@ -5,6 +5,7 @@ dependencies:
 test:
   override:
     - mkdir -p /home/ubuntu/.go_workspace/src/github.com/Bowery
+    - git clone git@github.com:Bowery/gopackages /home/ubuntu/.go_workspace/src/github.com/Bowery/gopackages
     - cp -r /home/ubuntu/broome /home/ubuntu/.go_workspace/src/github.com/Bowery/broome
     - cd /home/ubuntu/.go_workspace/src/github.com/Bowery/broome && go get && go test ./...
 deployment:
