@@ -16,6 +16,7 @@ import (
 	"github.com/Bowery/broome/db"
 	"github.com/Bowery/broome/requests"
 	"github.com/Bowery/broome/util"
+	"github.com/Bowery/gopackages/config"
 	"github.com/Bowery/gopackages/keen"
 	"github.com/Bowery/gopackages/schemas"
 	"github.com/bradrydzewski/go.stripe"
@@ -27,7 +28,6 @@ import (
 // 32 MB, same as http.
 const (
 	httpMaxMem = 32 << 10
-	slackToken = "xoxp-2157690968-2174706611-2385261803-c58929"
 )
 
 var (
@@ -52,12 +52,12 @@ var Routes = []*Route{
 	&Route{"/developers", []string{"POST"}, CreateDeveloperHandler, false},
 	&Route{"/developers/token", []string{"POST"}, CreateTokenHandler, false},
 	&Route{"/developers/me", []string{"GET"}, GetCurrentDeveloperHandler, false},
+	&Route{"/developers/new", []string{"GET"}, NewDevHandler, true},
 	&Route{"/developers/{token}", []string{"PUT"}, UpdateDeveloperHandler, true},
 	&Route{"/developers/{token}", []string{"GET"}, DeveloperInfoHandler, true},
-	&Route{"/developers/new", []string{"GET"}, NewDevHandler, true},
+	&Route{"/session/{id}", []string{"GET"}, SessionInfoHandler, false},
 	&Route{"/signup/{id}", []string{"GET"}, SignUpHandler, false},
 	&Route{"/signup", []string{"POST"}, CreateSessionHandler, false},
-	&Route{"/session/{id}", []string{"GET"}, SessionHandler, false},
 	&Route{"/thanks!", []string{"GET"}, ThanksHandler, false},
 	&Route{"/reset/{email}", []string{"GET"}, ResetPasswordHandler, false},
 	&Route{"/developers/reset/{token}/{id}", []string{"GET"}, ResetHandler, false},
@@ -69,27 +69,25 @@ var Routes = []*Route{
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	stripeKey := "sk_test_BKnPoMNUWSGHJsLDcSGeV8I9"
-	chimpKey := "923742397a5bf0c8e3efc6d78517911d-us3"
-	mandrillKey := "nYs-WjIVVEAo4ELuda8Elw" // "deMcwBJQFPC7FLeDZwlErg" // "DfJcUPXNJDTYQOYN0jNcGg"
+	stripeKey := config.StripeTestPublicKey
+
 	var cwd, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 	if os.Getenv("ENV") == "production" {
 		STATIC_DIR = cwd + "/" + STATIC_DIR
 		stripeKey = "sk_live_fx0WR9yUxv6JLyOcawBdNEgj"
 	}
 	stripe.SetKey(stripeKey)
-	chimp = gochimp.NewChimp(chimpKey, true)
-	mandrill, _ = gochimp.NewMandrill(mandrillKey)
+	chimp = gochimp.NewChimp(config.MailchimpKey, true)
+	mandrill, _ = gochimp.NewMandrill(config.MandrillKey)
 	keenC = &keen.Client{
-		WriteKey:  "8bbe0d9425a22a6c31e6da9ae3012c738ee21000b533c351a419bb0e3d08431456359d1bea654a39c2065df0b1df997ecde7e3cf49a9be0cd44341b15c1ff5523f13d26d8060373390f47bcc6a33b80e69e2b2c1101cde4ddb3d20b16a53a439a98043919e809c09c30e4856dedc963f",
-		ProjectID: "52c08d6736bf5a4a4b000005",
+		WriteKey:  config.KeenWriteKey,
+		ProjectID: config.KeenProjectID,
 	}
-
 }
 
-// GET /, Introduction to Crosby
+// GET /, Introduction
 func HomeHandler(rw http.ResponseWriter, req *http.Request) {
-	if err := RenderTemplate(rw, "home", map[string]string{"Name": "Crosby"}); err != nil {
+	if err := RenderTemplate(rw, "home", map[string]string{"Name": "Broome"}); err != nil {
 		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
 	}
 }
@@ -286,7 +284,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	// Post to slack
 	if os.Getenv("ENV") == "production" && !strings.Contains(body.Email, "@bowery.io") {
 		payload := url.Values{}
-		payload.Set("token", slackToken)
+		payload.Set("token", config.SlackToken)
 		payload.Set("channel", "#users")
 		payload.Set("text", u.Name+" "+u.Email+" just signed up.")
 		payload.Set("username", "Drizzy Drake")
@@ -504,7 +502,7 @@ func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
 
 // GET /session/{id}, Gets user by ID. If their license has expired it attempts
 // to charge them again. It is called everytime crosby is run.
-func SessionHandler(rw http.ResponseWriter, req *http.Request) {
+func SessionInfoHandler(rw http.ResponseWriter, req *http.Request) {
 	res := NewResponder(rw, req)
 
 	id := mux.Vars(req)["id"]
@@ -520,7 +518,7 @@ func SessionHandler(rw http.ResponseWriter, req *http.Request) {
 
 	if u.Expiration.After(time.Now()) {
 		res.Body["status"] = "found"
-		res.Body["user"] = u
+		res.Body["developer"] = u
 		res.Send(http.StatusOK)
 		keenC.AddEvent("crosby session found", map[string]*schemas.Developer{"user": u})
 		return
@@ -528,7 +526,7 @@ func SessionHandler(rw http.ResponseWriter, req *http.Request) {
 
 	if u.StripeToken == "" {
 		res.Body["status"] = "expired"
-		res.Body["user"] = u
+		res.Body["developer"] = u
 		res.Send(http.StatusOK)
 		keenC.AddEvent("crosby trial expired", map[string]*schemas.Developer{"user": u})
 		return
