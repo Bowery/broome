@@ -31,10 +31,11 @@ const (
 )
 
 var (
-	STATIC_DIR string = TEMPLATE_DIR
-	chimp      *gochimp.ChimpAPI
-	mandrill   *gochimp.MandrillAPI
-	keenC      *keen.Client
+	STATIC_DIR      string = TEMPLATE_DIR
+	chimp           *gochimp.ChimpAPI
+	mandrill        *gochimp.MandrillAPI
+	keenC           *keen.Client
+	stripePublicKey string
 )
 
 // Route is a single named route with a http.HandlerFunc.
@@ -57,6 +58,7 @@ var Routes = []*Route{
 	&Route{"/developers/{token}", []string{"GET"}, DeveloperInfoHandler, true},
 	&Route{"/session/{id}", []string{"GET"}, SessionInfoHandler, false},
 	&Route{"/signup/{id}", []string{"GET"}, SignUpHandler, false},
+	&Route{"/signup/{id}", []string{"POST"}, PaymentHandler, false},
 	&Route{"/signup", []string{"POST"}, CreateSessionHandler, false},
 	&Route{"/thanks!", []string{"GET"}, ThanksHandler, false},
 	&Route{"/reset/{email}", []string{"GET"}, ResetPasswordHandler, false},
@@ -69,14 +71,16 @@ var Routes = []*Route{
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	stripeKey := config.StripeTestPublicKey
+	stripeSecretKey := config.StripeTestSecretKey
+	stripePublicKey = config.StripeTestPublicKey
 
 	var cwd, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 	if os.Getenv("ENV") == "production" {
 		STATIC_DIR = cwd + "/" + STATIC_DIR
-		stripeKey = "sk_live_fx0WR9yUxv6JLyOcawBdNEgj"
+		stripeSecretKey = config.StripeLiveSecretKey
+		stripePublicKey = config.StripeLivePublicKey
 	}
-	stripe.SetKey(stripeKey)
+	stripe.SetKey(stripeSecretKey)
 	chimp = gochimp.NewChimp(config.MailchimpKey, true)
 	mandrill, _ = gochimp.NewMandrill(config.MandrillKey)
 	keenC = &keen.Client{
@@ -414,41 +418,45 @@ func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// Silent Signup from cli and not signup form. Will not charge them, but will give them a free month
-	if req.PostFormValue("stripeToken") == "" || req.PostFormValue("stripeEmail") == "" || req.PostFormValue("password") == "" {
-		if err := db.Save(u); err != nil {
-			res.Body["status"] = "failed"
-			res.Body["err"] = err.Error()
-			res.Send(http.StatusBadRequest)
-			return
-		}
-		res.Body["status"] = "created"
-		res.Body["developer"] = u
-		res.Send(http.StatusOK)
-		keenC.AddEvent("crosby trial new", map[string]*schemas.Developer{"user": u})
-		return
-	}
-
-	// Use Account Number (Id) to get user
-	if id == "" {
-		res.Body["status"] = "failed"
-		res.Body["err"] = "Missing required field: id"
-		res.Send(http.StatusBadRequest)
-		return
-	}
-	u, err := db.GetDeveloperById(id)
-	if err != nil {
+	if err := db.Save(u); err != nil {
 		res.Body["status"] = "failed"
 		res.Body["err"] = err.Error()
 		res.Send(http.StatusBadRequest)
 		return
 	}
-	u.Name = name
-	u.Email = email
+	res.Body["status"] = "created"
+	res.Body["developer"] = u
+	res.Send(http.StatusOK)
+	keenC.AddEvent("crosby trial new", map[string]*schemas.Developer{"user": u})
+}
+
+// PUT /signup/{id} payments
+func PaymentHandler(rw http.ResponseWriter, req *http.Request) {
+	res := NewResponder(rw, req)
+	if err := req.ParseForm(); err != nil {
+		res.Body["status"] = "failed"
+		res.Body["error"] = err.Error()
+		res.Send(http.StatusBadRequest)
+		return
+	}
+
+	id := mux.Vars(req)["id"]
+	name := req.PostFormValue("name")
+	email := req.PostFormValue("stripeEmail")
+
+	u, err := db.GetDeveloperById(id)
+	if err != nil {
+		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
+		return
+	}
 	u.Expiration = time.Now().Add(time.Hour * 24 * 30)
 
 	// Hash Password
 	u.Salt = util.HashToken()
 	u.Password = util.HashPassword(req.PostFormValue("password"), u.Salt)
+
+	u.Name = name
+	u.Email = email
 
 	// Create Stripe Customer
 	customerParams := stripe.CustomerParams{
@@ -458,9 +466,7 @@ func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 	customer, err := stripe.Customers.Create(&customerParams)
 	if err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
 		return
 	}
 
@@ -473,31 +479,28 @@ func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 	_, err = stripe.Charges.Create(&chargeParams)
 	if err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
 		return
 	}
 
 	// Update Stripe Info and Persist to Orchestrate
 	u.StripeToken = customer.Id
-	if err := db.Save(u); err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
+	if err := db.UpdateDeveloper(bson.M{"_id": u.ID}, bson.M{
+		"expiration":  u.Expiration,
+		"stripeToken": u.StripeToken,
+		"name":        u.Name,
+		"salt":        u.Salt,
+		"password":    u.Password,
+		"email":       u.Email,
+	}); err != nil {
+		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
 		return
 	}
 
 	keenC.AddEvent("crosby payment new", map[string]*schemas.Developer{"user": u})
 
-	if req.PostFormValue("html") != "" {
-		http.Redirect(rw, req, "/thanks!", 302)
-		return
-	}
-
-	res.Body["status"] = "success"
-	res.Body["developer"] = u
-	res.Send(http.StatusOK)
+	http.Redirect(rw, req, "/thanks!", 302)
+	return
 }
 
 // GET /session/{id}, Gets user by ID. If their license has expired it attempts
@@ -565,14 +568,9 @@ func SessionInfoHandler(rw http.ResponseWriter, req *http.Request) {
 
 // GET /signup/:id, Renders signup find. Will also handle billing
 func SignUpHandler(rw http.ResponseWriter, req *http.Request) {
-	stripePubKey := "pk_test_m8TQEAkYWSc1jZh7czo8xhA7"
-	if os.Getenv("ENV") == "production" {
-		stripePubKey = "pk_live_LOngSSK6d3qwW0aBEhWSVEcF"
-	}
-
 	if err := RenderTemplate(rw, "signup", map[string]interface{}{
 		"isSignup":     true,
-		"stripePubKey": stripePubKey,
+		"stripePubKey": stripePublicKey,
 		"id":           mux.Vars(req)["id"],
 	}); err != nil {
 		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
