@@ -16,22 +16,26 @@ import (
 	"github.com/Bowery/broome/db"
 	"github.com/Bowery/broome/requests"
 	"github.com/Bowery/broome/util"
+	"github.com/Bowery/gopackages/config"
+	"github.com/Bowery/gopackages/keen"
 	"github.com/Bowery/gopackages/schemas"
 	"github.com/bradrydzewski/go.stripe"
 	"github.com/gorilla/mux"
 	"github.com/mattbaird/gochimp"
+	"labix.org/v2/mgo/bson"
 )
 
 // 32 MB, same as http.
 const (
 	httpMaxMem = 32 << 10
-	slackToken = "xoxp-2157690968-2174706611-2385261803-c58929"
 )
 
 var (
-	STATIC_DIR string = TEMPLATE_DIR
-	chimp      *gochimp.ChimpAPI
-	mandrill   *gochimp.MandrillAPI
+	STATIC_DIR      string = TEMPLATE_DIR
+	chimp           *gochimp.ChimpAPI
+	mandrill        *gochimp.MandrillAPI
+	keenC           *keen.Client
+	stripePublicKey string
 )
 
 // Route is a single named route with a http.HandlerFunc.
@@ -49,11 +53,13 @@ var Routes = []*Route{
 	&Route{"/developers", []string{"POST"}, CreateDeveloperHandler, false},
 	&Route{"/developers/token", []string{"POST"}, CreateTokenHandler, false},
 	&Route{"/developers/me", []string{"GET"}, GetCurrentDeveloperHandler, false},
+	&Route{"/developers/new", []string{"GET"}, NewDevHandler, true},
 	&Route{"/developers/{token}", []string{"PUT"}, UpdateDeveloperHandler, true},
 	&Route{"/developers/{token}", []string{"GET"}, DeveloperInfoHandler, true},
-	&Route{"/developers/new", []string{"GET"}, NewDevHandler, true},
+	&Route{"/session/{id}", []string{"GET"}, SessionInfoHandler, false},
 	&Route{"/signup/{id}", []string{"GET"}, SignUpHandler, false},
-	// &Route{"/signup/{id}", []string{"POST"}, CreateSessionHandler, false},
+	&Route{"/signup/{id}", []string{"POST"}, PaymentHandler, false},
+	&Route{"/signup", []string{"POST"}, CreateSessionHandler, false},
 	&Route{"/thanks!", []string{"GET"}, ThanksHandler, false},
 	&Route{"/reset/{email}", []string{"GET"}, ResetPasswordHandler, false},
 	&Route{"/developers/reset/{token}/{id}", []string{"GET"}, ResetHandler, false},
@@ -65,22 +71,27 @@ var Routes = []*Route{
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	stripeKey := "sk_test_BKnPoMNUWSGHJsLDcSGeV8I9"
-	chimpKey := "923742397a5bf0c8e3efc6d78517911d-us3"
-	mandrillKey := "nYs-WjIVVEAo4ELuda8Elw" // "deMcwBJQFPC7FLeDZwlErg" // "DfJcUPXNJDTYQOYN0jNcGg"
+	stripeSecretKey := config.StripeTestSecretKey
+	stripePublicKey = config.StripeTestPublicKey
+
 	var cwd, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 	if os.Getenv("ENV") == "production" {
 		STATIC_DIR = cwd + "/" + STATIC_DIR
-		stripeKey = "sk_live_fx0WR9yUxv6JLyOcawBdNEgj"
+		stripeSecretKey = config.StripeLiveSecretKey
+		stripePublicKey = config.StripeLivePublicKey
 	}
-	stripe.SetKey(stripeKey)
-	chimp = gochimp.NewChimp(chimpKey, true)
-	mandrill, _ = gochimp.NewMandrill(mandrillKey)
+	stripe.SetKey(stripeSecretKey)
+	chimp = gochimp.NewChimp(config.MailchimpKey, true)
+	mandrill, _ = gochimp.NewMandrill(config.MandrillKey)
+	keenC = &keen.Client{
+		WriteKey:  config.KeenWriteKey,
+		ProjectID: config.KeenProjectID,
+	}
 }
 
-// GET /, Introduction to Crosby
+// GET /, Introduction
 func HomeHandler(rw http.ResponseWriter, req *http.Request) {
-	if err := RenderTemplate(rw, "home", map[string]string{"Name": "Crosby"}); err != nil {
+	if err := RenderTemplate(rw, "home", map[string]string{"Name": "Broome"}); err != nil {
 		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
 	}
 }
@@ -216,13 +227,14 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	u := &schemas.Developer{}
-	u.Name = body.Name
-	u.Email = body.Email
-	u.Password = body.Password
-	u.Token = util.HashToken()
-	u.IntegrationEngineer = integrationEngineer.Name
-	u.IsPaid = false
+	u := &schemas.Developer{
+		Name:                body.Name,
+		Email:               body.Email,
+		Password:            body.Password,
+		Token:               util.HashToken(),
+		IntegrationEngineer: integrationEngineer.Name,
+		IsPaid:              false,
+	}
 
 	if os.Getenv("ENV") == "production" && !strings.Contains(body.Email, "@bowery.io") {
 		if _, err := chimp.ListsSubscribe(gochimp.ListsSubscribe{
@@ -276,7 +288,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	// Post to slack
 	if os.Getenv("ENV") == "production" && !strings.Contains(body.Email, "@bowery.io") {
 		payload := url.Values{}
-		payload.Set("token", slackToken)
+		payload.Set("token", config.SlackToken)
 		payload.Set("channel", "#users")
 		payload.Set("text", u.Name+" "+u.Email+" just signed up.")
 		payload.Set("username", "Drizzy Drake")
@@ -381,131 +393,184 @@ func GetCurrentDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	res.Send(http.StatusOK)
 }
 
-// // POST /session, Creates a new user and charges them for the first year.
-// func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
-// 	res := NewResponder(rw, req)
-// 	if err := req.ParseForm(); err != nil {
-// 		res.Body["status"] = "failed"
-// 		res.Body["error"] = err.Error()
-// 		res.Send(http.StatusBadRequest)
-// 		return
-// 	}
+// POST /session, Creates a new user and charges them for the first year.
+func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
+	res := NewResponder(rw, req)
+	if err := req.ParseForm(); err != nil {
+		res.Body["status"] = "failed"
+		res.Body["error"] = err.Error()
+		res.Send(http.StatusBadRequest)
+		return
+	}
 
-// 	name := req.PostFormValue("name")
-// 	email := req.PostFormValue("stripeEmail")
-// 	if email == "" {
-// 		email = req.PostFormValue("email")
-// 	}
+	name := req.PostFormValue("name")
+	id := req.PostFormValue("id")
+	email := req.PostFormValue("stripeEmail")
+	if email == "" {
+		email = req.PostFormValue("email")
+	}
 
-// 	u := &schemas.Developer{}
-// 	u.Name = name
-// 	u.Email = email
-// 	u.Expiration = time.Now().Add(time.Hour * 24 * 30)
+	u := &schemas.Developer{
+		Name:       name,
+		Email:      email,
+		Expiration: time.Now().Add(time.Hour * 24 * 30),
+		ID:         bson.ObjectIdHex(id),
+	}
 
-// 	// Silent Signup from cli and not signup form. Will not charge them, but will give them a free month
-// 	if req.PostFormValue("stripeToken") == "" || req.PostFormValue("stripeEmail") == "" || req.PostFormValue("password") == "" {
-// 		if err := u.Save(); err != nil {
-// 			res.Body["status"] = "failed"
-// 			res.Body["err"] = err.Error()
-// 			res.Send(http.StatusBadRequest)
-// 			return
-// 		}
-// 		res.Body["status"] = "created"
-// 		res.Body["user"] = u
-// 		res.Send(http.StatusOK)
-// 		// keenC.AddEvent("crosby trial new", map[string]*User{"user": u})
-// 		return
-// 	}
+	// Silent Signup from cli and not signup form. Will not charge them, but will give them a free month
+	if err := db.Save(u); err != nil {
+		res.Body["status"] = "failed"
+		res.Body["err"] = err.Error()
+		res.Send(http.StatusBadRequest)
+		return
+	}
+	res.Body["status"] = "created"
+	res.Body["developer"] = u
+	res.Send(http.StatusOK)
+	keenC.AddEvent("crosby trial new", map[string]*schemas.Developer{"user": u})
+}
 
-// 	// Use Account Number (Id) to get user
-// 	id := req.PostFormValue("id")
-// 	if id == "" {
-// 		res.Body["status"] = "failed"
-// 		res.Body["err"] = "Missing required field: id"
-// 		res.Send(http.StatusBadRequest)
-// 		return
-// 	}
-// 	// u, err := GetUser(id)
-// 	if err != nil {
-// 		res.Body["status"] = "failed"
-// 		res.Body["err"] = err.Error()
-// 		res.Send(http.StatusBadRequest)
-// 		return
-// 	}
-// 	u.Name = name
-// 	u.Email = email
-// 	u.Expiration = time.Now().Add(time.Hour * 24 * 30)
+// PUT /signup/{id} payments
+func PaymentHandler(rw http.ResponseWriter, req *http.Request) {
+	res := NewResponder(rw, req)
+	if err := req.ParseForm(); err != nil {
+		res.Body["status"] = "failed"
+		res.Body["error"] = err.Error()
+		res.Send(http.StatusBadRequest)
+		return
+	}
 
-// 	// Hash Password
-// 	// u.Salt, err = HashToken()
-// 	if err != nil {
-// 		res.Body["status"] = "failed"
-// 		res.Body["error"] = err.Error()
-// 		res.Send(http.StatusBadRequest)
-// 		return
-// 	}
-// 	// u.Password = HashPassword(req.PostFormValue("password"), u.Salt)
+	id := mux.Vars(req)["id"]
+	name := req.PostFormValue("name")
+	email := req.PostFormValue("stripeEmail")
 
-// 	// Create Stripe Customer
-// 	customerParams := stripe.CustomerParams{
-// 		Email: u.Email,
-// 		Desc:  u.Name,
-// 		Token: req.PostFormValue("stripeToken"),
-// 	}
-// 	customer, err := stripe.Customers.Create(&customerParams)
-// 	if err != nil {
-// 		res.Body["status"] = "failed"
-// 		res.Body["error"] = err.Error()
-// 		res.Send(http.StatusBadRequest)
-// 		return
-// 	}
+	u, err := db.GetDeveloperById(id)
+	if err != nil {
+		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
+		return
+	}
+	u.Expiration = time.Now().Add(time.Hour * 24 * 30)
 
-// 	// Charge Stripe Customer
-// 	chargeParams := stripe.ChargeParams{
-// 		Desc:     "Crosby Annual License",
-// 		Amount:   2500,
-// 		Currency: "usd",
-// 		Customer: customer.Id,
-// 	}
-// 	_, err = stripe.Charges.Create(&chargeParams)
-// 	if err != nil {
-// 		res.Body["status"] = "failed"
-// 		res.Body["error"] = err.Error()
-// 		res.Send(http.StatusBadRequest)
-// 		return
-// 	}
+	// Hash Password
+	u.Salt = util.HashToken()
+	u.Password = util.HashPassword(req.PostFormValue("password"), u.Salt)
 
-// 	// Update Stripe Info and Persist to Orchestrate
-// 	u.StripeToken = customer.Id
-// 	if err := u.Save(); err != nil {
-// 		res.Body["status"] = "failed"
-// 		res.Body["error"] = err.Error()
-// 		res.Send(http.StatusBadRequest)
-// 		return
-// 	}
+	u.Name = name
+	u.Email = email
 
-// 	// keenC.AddEvent("crosby payment new", map[string]*User{"user": u})
+	// Create Stripe Customer
+	customerParams := stripe.CustomerParams{
+		Email: u.Email,
+		Desc:  u.Name,
+		Token: req.PostFormValue("stripeToken"),
+	}
+	customer, err := stripe.Customers.Create(&customerParams)
+	if err != nil {
+		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
+		return
+	}
 
-// 	if req.PostFormValue("html") != "" {
-// 		http.Redirect(rw, req, "/thanks!", 302)
-// 		return
-// 	}
+	// Charge Stripe Customer
+	chargeParams := stripe.ChargeParams{
+		Desc:     "Crosby Annual License",
+		Amount:   2500,
+		Currency: "usd",
+		Customer: customer.Id,
+	}
+	_, err = stripe.Charges.Create(&chargeParams)
+	if err != nil {
+		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
+		return
+	}
 
-// 	res.Body["status"] = "success"
-// 	res.Body["user"] = u
-// 	res.Send(http.StatusOK)
-// }
+	// Update Stripe Info and Persist to Orchestrate
+	u.StripeToken = customer.Id
+	if err := db.UpdateDeveloper(bson.M{"_id": u.ID}, bson.M{
+		"expiration":  u.Expiration,
+		"stripeToken": u.StripeToken,
+		"name":        u.Name,
+		"salt":        u.Salt,
+		"password":    u.Password,
+		"email":       u.Email,
+	}); err != nil {
+		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
+		return
+	}
+
+	keenC.AddEvent("crosby payment new", map[string]*schemas.Developer{"user": u})
+
+	http.Redirect(rw, req, "/thanks!", 302)
+	return
+}
+
+// GET /session/{id}, Gets user by ID. If their license has expired it attempts
+// to charge them again. It is called everytime crosby is run.
+func SessionInfoHandler(rw http.ResponseWriter, req *http.Request) {
+	res := NewResponder(rw, req)
+
+	id := mux.Vars(req)["id"]
+	fmt.Println("Getting user by id", id)
+	u, err := db.GetDeveloperById(id)
+	if err != nil {
+		res.Body["status"] = "failed"
+		res.Body["error"] = err.Error()
+		res.Send(http.StatusBadRequest)
+		keenC.AddEvent("crosby session failed", map[string]string{"id": id})
+		return
+	}
+
+	if u.Expiration.After(time.Now()) {
+		res.Body["status"] = "found"
+		res.Body["developer"] = u
+		res.Send(http.StatusOK)
+		keenC.AddEvent("crosby session found", map[string]*schemas.Developer{"user": u})
+		return
+	}
+
+	if u.StripeToken == "" {
+		res.Body["status"] = "expired"
+		res.Body["developer"] = u
+		res.Send(http.StatusOK)
+		keenC.AddEvent("crosby trial expired", map[string]*schemas.Developer{"user": u})
+		return
+	}
+
+	// Charge them, update expiration, & respond with found.
+	// Charge Stripe Customer
+	chargeParams := stripe.ChargeParams{
+		Desc:     "Crosby Annual License",
+		Amount:   2500,
+		Currency: "usd",
+		Customer: u.StripeToken,
+	}
+	_, err = stripe.Charges.Create(&chargeParams)
+	if err != nil {
+		res.Body["status"] = "failed"
+		res.Body["error"] = err.Error()
+		res.Send(http.StatusBadRequest)
+		keenC.AddEvent("crosby payment failed", map[string]*schemas.Developer{"user": u})
+		return
+	}
+	u.Expiration = time.Now()
+	if err := db.Save(u); err != nil { // not actually a save, but an update. fix
+		res.Body["status"] = "failed"
+		res.Body["error"] = err.Error()
+		res.Send(http.StatusBadRequest)
+		return
+	}
+
+	res.Body["status"] = "found"
+	res.Body["user"] = u
+	res.Send(http.StatusOK)
+	keenC.AddEvent("crosby payment recurred", map[string]*schemas.Developer{"user": u})
+	return
+}
 
 // GET /signup/:id, Renders signup find. Will also handle billing
 func SignUpHandler(rw http.ResponseWriter, req *http.Request) {
-	stripePubKey := "pk_test_m8TQEAkYWSc1jZh7czo8xhA7"
-	if os.Getenv("ENV") == "production" {
-		stripePubKey = "pk_live_LOngSSK6d3qwW0aBEhWSVEcF"
-	}
-
 	if err := RenderTemplate(rw, "signup", map[string]interface{}{
 		"isSignup":     true,
-		"stripePubKey": stripePubKey,
+		"stripePubKey": stripePublicKey,
 		"id":           mux.Vars(req)["id"],
 	}); err != nil {
 		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})

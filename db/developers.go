@@ -64,19 +64,20 @@ func MockDB() (*schemas.Developer, error) {
 	}
 	t, _ := time.Parse(time.RFC3339, "2014-11-10T00:00:00Z")
 
-	dev := &schemas.Developer{}
-	dev.ID = bson.ObjectIdHex("52e7cc4308bcfd732f000028")
-	dev.CreatedAt = 1390922819901
-	dev.Email = "byrd@bowery.io"
-	dev.IsPaid = false
-	dev.IntegrationEngineer = "David Byrd"
-	dev.IsAdmin = true
-	dev.License = "660d8268-731d-4cbf-8359-00d23972c4b2"
-	dev.Name = "David Byrd"
-	dev.Password = "64ebf84917bc14112b374c28bb0cdc6fe9941e1aa1681c12519c7f27e967a849"
-	dev.Salt = "a1681ed1-8830-11e3-84be-0d701751111b"
-	dev.Token = "0f0a9ec0-f0e8-11e3-a86e-b9bd016d5ec0"
-	dev.Expiration = t
+	dev := &schemas.Developer{
+		ID:                  bson.ObjectIdHex("52e7cc4308bcfd732f000028"),
+		CreatedAt:           1390922819901,
+		Email:               "byrd@bowery.io",
+		IsPaid:              false,
+		IntegrationEngineer: "David Byrd",
+		IsAdmin:             true,
+		License:             "660d8268-731d-4cbf-8359-00d23972c4b2",
+		Name:                "David Byrd",
+		Password:            "64ebf84917bc14112b374c28bb0cdc6fe9941e1aa1681c12519c7f27e967a849",
+		Salt:                "a1681ed1-8830-11e3-84be-0d701751111b",
+		Token:               "0f0a9ec0-f0e8-11e3-a86e-b9bd016d5ec0",
+		Expiration:          t,
+	}
 
 	devs.Remove(bson.M{"_id": dev.ID})
 	if err := Save(dev); err != nil {

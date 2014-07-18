@@ -8,6 +8,7 @@ import (
 	"github.com/Bowery/broome/db"
 	"github.com/Bowery/broome/util"
 	"io"
+	"labix.org/v2/mgo/bson"
 	"net/http"
 	"strconv"
 	"strings"
@@ -70,7 +71,7 @@ func (ah *AuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	username := credentials[0]
 	password := credentials[1]
-	query := map[string]interface{}{}
+	query := bson.M{}
 	if password == "" {
 		query["token"] = username
 	} else {
