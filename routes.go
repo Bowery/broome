@@ -355,8 +355,13 @@ func CreateTokenHandler(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Update token on developer object
+	// to avoid secondary lookup.
+	u.Token = token
+
 	res.Body["status"] = "created"
 	res.Body["token"] = token
+	res.Body["developer"] = u
 	res.Send(http.StatusOK)
 }
 
