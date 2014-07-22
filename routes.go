@@ -22,6 +22,7 @@ import (
 	"github.com/bradrydzewski/go.stripe"
 	"github.com/gorilla/mux"
 	"github.com/mattbaird/gochimp"
+	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -383,7 +384,12 @@ func GetCurrentDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	u, err := db.GetDeveloper(query)
 	if err != nil {
 		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
+		if err == mgo.ErrNotFound {
+			res.Body["error"] = "Invalid Token."
+		} else {
+			res.Body["error"] = err.Error()
+		}
+
 		res.Send(http.StatusInternalServerError)
 		return
 	}
