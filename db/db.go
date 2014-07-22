@@ -2,8 +2,9 @@
 package db
 
 import (
-	"github.com/Bowery/gopackages/database"
 	"os"
+
+	"github.com/Bowery/gopackages/database"
 )
 
 var Client *database.Client
@@ -20,7 +21,7 @@ func init() {
 	if os.Getenv("ENV") == "production" {
 		dbAddr = "ec2-54-196-181-224.compute-1.amazonaws.com"
 		dbUsr = "bowery"
-		dbPass = "java$script"
+		dbPass = "java$cript"
 	}
 
 	var err error
