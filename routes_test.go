@@ -91,7 +91,9 @@ func TestUpdateDeveloperHandler(t *testing.T) {
 	}
 	req.SetBasicAuth(token, "")
 	req.PostForm = url.Values{
-		"name": {"David"},
+		"name":        {"David"},
+		"oldpassword": {"java$cript"},
+		"password":    {"newpass"},
 	}
 	res := httptest.NewRecorder()
 	broomeServer(res, req)
@@ -245,7 +247,6 @@ func TestPasswordEditHandler(t *testing.T) {
 	}
 	req.PostForm = url.Values{
 		"id":  {id.Hex()},
-		"old": {"java$cript"},
 		"new": {"password"},
 	}
 	res := httptest.NewRecorder()
