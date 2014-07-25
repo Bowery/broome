@@ -162,6 +162,13 @@ func UpdateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	if password := req.FormValue("password"); password != "" {
+		oldpass := req.FormValue("oldpassword")
+		if oldpass == "" || util.HashPassword(oldpass, u.Salt) != u.Password {
+			res.Body["error"] = "Old password is incorrect."
+			res.Send(http.StatusBadRequest)
+			return
+		}
+
 		update["password"] = util.HashPassword(password, u.Salt)
 	}
 
@@ -686,13 +693,6 @@ func PasswordEditHandler(rw http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		res.Body["status"] = "failed"
 		res.Body["err"] = err.Error()
-		res.Send(http.StatusBadRequest)
-		return
-	}
-
-	if util.HashPassword(req.FormValue("old"), u.Salt) != u.Password {
-		res.Body["status"] = "failed"
-		res.Body["err"] = "Old password is incorrect."
 		res.Send(http.StatusBadRequest)
 		return
 	}

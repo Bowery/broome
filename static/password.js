@@ -6,7 +6,7 @@
 function PasswordController () {
   this.formEl = $('.group-password .form')
 
-  this.editUrl = '/developers/' + this.formEl.data('token') + '/reset/'
+  this.editUrl = '/developers/reset/' + this.formEl.data('token')
   console.log(this.editUrl)
   $('.group-password .btn-submit').click(this.editPassword.bind(this))
 }
@@ -19,7 +19,7 @@ PasswordController.prototype.editPassword = function (e) {
   e.preventDefault()
 
   var ps = document.getElementsByClassName("password")
-  if (ps[1].value != ps[2].value)
+  if (ps[0].value != ps[1].value)
     return butterbar("passwords don't match", "alert")
 
   var data = $(this.formEl).serialize()
