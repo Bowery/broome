@@ -245,7 +245,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	_, err = db.GetDeveloper(bson.M{"email": u.Email})
-	if err == mgo.ErrNotFound {
+	if err != nil {
 		res.Body["error"] = "email already exists"
 		res.Send(http.StatusInternalServerError)
 		return
