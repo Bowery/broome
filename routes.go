@@ -244,6 +244,13 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 		IsPaid:              false,
 	}
 
+	_, err = db.GetDeveloper(bson.M{"email": u.Email})
+	if err == mgo.ErrNotFound {
+		res.Body["error"] = "email already exists"
+		res.Send(http.StatusInternalServerError)
+		return
+	}
+
 	if os.Getenv("ENV") == "production" && !strings.Contains(body.Email, "@bowery.io") {
 		if _, err := chimp.ListsSubscribe(gochimp.ListsSubscribe{
 			ListId: "200e892f56",
