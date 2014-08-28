@@ -15,7 +15,7 @@ func init() {
 	dbPass := ""
 
 	if os.Getenv("ENV") == "development" || os.Getenv("ENV") == "testing" {
-		dbAddr = "10.0.0.15:27017"
+		dbAddr = "localhost:27017"
 	}
 
 	if os.Getenv("ENV") == "production" {
