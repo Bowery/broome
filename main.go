@@ -22,7 +22,7 @@ func Handler() http.Handler {
 		}
 		route.HandlerFunc(r.Handler)
 	}
-	return &SlashHandler{&LogHandler{os.Stdout, router}}
+	return &SlashHandler{&CorsHandler{&LogHandler{os.Stdout, router}}}
 }
 
 func main() {
