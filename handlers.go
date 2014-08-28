@@ -109,6 +109,16 @@ func (sh *SlashHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	sh.Handler.ServeHTTP(rw, req)
 }
 
+// CorsHandler is a http.Handler that enabled cross origin resource sharing.
+type CorsHandler struct {
+	Handler http.Handler
+}
+
+func (ch *CorsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	rw.Header().Add("Access-Control-Allow-Origin", "*")
+	ch.Handler.ServeHTTP(rw, req)
+}
+
 // LogHandler is a http.Handler that logs requests in a simple format.
 type LogHandler struct {
 	Writer  io.Writer
