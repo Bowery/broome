@@ -212,7 +212,6 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 		&engineer{Name: "Steve Kaliski", Email: "steve@bowery.io"},
 		&engineer{Name: "David Byrd", Email: "byrd@bowery.io"},
 		&engineer{Name: "Larz Conwell", Email: "larz@bowery.io"},
-		&engineer{Name: "Ricky Medina", Email: "rm@bowery.io"},
 	}
 
 	integrationEngineer := integrationEngineers[rand.Int()%len(integrationEngineers)]
