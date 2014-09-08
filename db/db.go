@@ -19,7 +19,7 @@ func init() {
 	}
 
 	if os.Getenv("ENV") == "production" {
-		dbAddr = "ec2-54-196-181-224.compute-1.amazonaws.com"
+		dbAddr = "ec2-54-166-124-190.compute-1.amazonaws.com,ec2-54-211-48-143.compute-1.amazonaws.com,ec2-54-87-106-210.compute-1.amazonaws.com"
 		dbUsr = "bowery"
 		dbPass = "java$cript"
 	}
