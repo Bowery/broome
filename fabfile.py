@@ -10,6 +10,7 @@ hosts = [
 env.key_filename = '/home/ubuntu/.ssh/id_aws'
 env.password = 'java$cript'
 
+@parallel
 def restart():
   sudo('mkdir -p /home/ubuntu/gocode/src/github.com/Bowery/')
   with cd('/home/ubuntu/gocode/src/github.com/Bowery/' + project):
