@@ -274,7 +274,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 		}
 
 		_, err = mandrill.MessageSend(gochimp.Message{
-			Subject:   "Welcome and Meet Your Integration Engineer",
+			Subject:   "Welcome to Bowery!",
 			FromEmail: integrationEngineer.Email,
 			FromName:  integrationEngineer.Name,
 			To: []gochimp.Recipient{{
