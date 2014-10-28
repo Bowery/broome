@@ -226,6 +226,48 @@ func TestResetRequestHandler(t *testing.T) {
 	}
 }
 
+// TODO (thebyrd) get a valid stripeToken for testing from stripe.js
+// func TestPaymentHandler(t *testing.T) {
+// 	mock, err := db.MockDB()
+// 	if err != nil {
+// 		t.Fatal("Could not Mock DB:", err)
+// 	}
+//
+// 	var token string
+// 	if token = mock.Token; token == "" {
+// 		t.Fatal("Invalid token")
+// 	}
+//
+// 	var email string
+// 	if email = mock.Email; email == "" {
+// 		t.Fatal("Invalid email")
+// 	}
+//
+// 	req, err := http.NewRequest("POST", "http://broome.io/developers/"+token+"/pay", nil)
+// 	if err != nil {
+// 		t.Fatal("Could not Create Request", err)
+// 	}
+// 	req.SetBasicAuth(token, "")
+// 	req.PostForm = url.Values{
+// 		"stripeToken": {"blah blah"},
+// 	}
+// 	res := httptest.NewRecorder()
+// 	broomeServer(res, req)
+//
+// 	if res.Code != http.StatusOK {
+// 		t.Fatalf("Non-expected status code: %v\tbody: %v", res.Code, res.Body)
+// 	}
+//
+// 	body := map[string]interface{}{}
+// 	if err := json.Unmarshal([]byte(res.Body.String()), &body); err != nil {
+// 		t.Fatal("Response is not valid JSON", err)
+// 	}
+//
+// 	if body["status"] != "success" {
+// 		t.Fatal("response status should be 'updated' not ", body["status"])
+// 	}
+// }
+
 func TestPasswordEditHandler(t *testing.T) {
 	mock, err := db.MockDB()
 	if err != nil {

@@ -24,3 +24,7 @@ type LoginReq struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
+
+type PaymentReq struct {
+	StripeToken string `json:"stripeToken"`
+}
