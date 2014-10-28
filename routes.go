@@ -57,9 +57,9 @@ var Routes = []*Route{
 	&Route{"/developers/new", []string{"GET"}, NewDevHandler, true},
 	&Route{"/developers/{token}", []string{"PUT"}, UpdateDeveloperHandler, true},
 	&Route{"/developers/{token}", []string{"GET"}, DeveloperInfoHandler, true},
+	&Route{"/developers/{token}/pay", []string{"POST"}, PaymentHandler, false},
 	&Route{"/session/{id}", []string{"GET"}, SessionInfoHandler, false},
 	&Route{"/signup/{id}", []string{"GET"}, SignUpHandler, false},
-	&Route{"/signup/{id}", []string{"POST"}, PaymentHandler, false},
 	&Route{"/signup", []string{"POST"}, CreateSessionHandler, false},
 	&Route{"/thanks!", []string{"GET"}, ThanksHandler, false},
 	&Route{"/reset/{email}", []string{"GET"}, ResetPasswordHandler, false},
@@ -241,6 +241,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 		Token:               util.HashToken(),
 		IntegrationEngineer: integrationEngineer.Name,
 		IsPaid:              false,
+		CreatedAt:           time.Now().Unix(),
 	}
 
 	_, err = db.GetDeveloper(bson.M{"email": u.Email})
@@ -449,76 +450,68 @@ func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
 	keenC.AddEvent("crosby trial new", map[string]*schemas.Developer{"user": u})
 }
 
-// PUT /signup/{id} payments
+// POST /developers/{token}/pay payments
 func PaymentHandler(rw http.ResponseWriter, req *http.Request) {
 	res := NewResponder(rw, req)
-	if err := req.ParseForm(); err != nil {
+	var body requests.PaymentReq
+	decoder := json.NewDecoder(req.Body)
+	err := decoder.Decode(&body)
+	if err != nil {
 		res.Body["status"] = "failed"
 		res.Body["error"] = err.Error()
 		res.Send(http.StatusBadRequest)
 		return
 	}
 
-	id := mux.Vars(req)["id"]
-	name := req.PostFormValue("name")
-	email := req.PostFormValue("stripeEmail")
-
-	u, err := db.GetDeveloperById(id)
+	d, err := db.GetDeveloper(map[string]interface{}{"token": mux.Vars(req)["token"]})
 	if err != nil {
-		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
+		res.Body["status"] = "failed"
+		res.Body["error"] = err.Error()
+		res.Send(http.StatusBadRequest)
 		return
 	}
-	u.Expiration = time.Now().Add(time.Hour * 24 * 30)
-
-	// Hash Password
-	u.Salt = util.HashToken()
-	u.Password = util.HashPassword(req.PostFormValue("password"), u.Salt)
-
-	u.Name = name
-	u.Email = email
 
 	// Create Stripe Customer
 	customerParams := stripe.CustomerParams{
-		Email: u.Email,
-		Desc:  u.Name,
-		Token: req.PostFormValue("stripeToken"),
+		Email: d.Email,
+		Desc:  d.Name,
+		Token: body.StripeToken,
 	}
+
 	customer, err := stripe.Customers.Create(&customerParams)
 	if err != nil {
-		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
+		res.Body["status"] = "failed"
+		res.Body["error"] = err.Error()
+		res.Send(http.StatusBadRequest)
 		return
 	}
 
 	// Charge Stripe Customer
 	chargeParams := stripe.ChargeParams{
-		Desc:     "Crosby Annual License",
-		Amount:   2500,
+		Desc:     "Bowery 3",
+		Amount:   2900,
 		Currency: "usd",
 		Customer: customer.Id,
 	}
+
 	_, err = stripe.Charges.Create(&chargeParams)
 	if err != nil {
 		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
 		return
 	}
 
-	// Update Stripe Info and Persist to Orchestrate
-	u.StripeToken = customer.Id
-	if err := db.UpdateDeveloper(bson.M{"_id": u.ID}, bson.M{
-		"expiration":  u.Expiration,
-		"stripeToken": u.StripeToken,
-		"name":        u.Name,
-		"salt":        u.Salt,
-		"password":    u.Password,
-		"email":       u.Email,
-	}); err != nil {
-		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
+	if err := db.UpdateDeveloper(map[string]interface{}{"token": d.Token}, map[string]interface{}{"isPaid": true}); err != nil {
+		res.Body["status"] = "failed"
+		res.Body["error"] = err.Error()
+		res.Send(http.StatusInternalServerError)
 		return
 	}
 
-	keenC.AddEvent("crosby payment new", map[string]*schemas.Developer{"user": u})
+	keenC.AddEvent("bowery payment new", map[string]*schemas.Developer{"developer": d})
 
-	http.Redirect(rw, req, "/thanks!", 302)
+	res.Body["status"] = "success"
+	res.Body["developer"] = d
+	res.Send(http.StatusOK)
 	return
 }
 
