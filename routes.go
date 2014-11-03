@@ -304,7 +304,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	if os.Getenv("ENV") == "production" && !strings.Contains(body.Email, "@bowery.io") {
 		payload := url.Values{}
 		payload.Set("token", config.SlackToken)
-		payload.Set("channel", "#users")
+		payload.Set("channel", "#activity")
 		payload.Set("text", u.Name+" "+u.Email+" just signed up.")
 		payload.Set("username", "Drizzy Drake")
 		http.PostForm("https://slack.com/api/chat.postMessage", payload)
