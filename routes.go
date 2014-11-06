@@ -49,20 +49,20 @@ type Route struct {
 
 // List of named routes.
 var Routes = []*Route{
-	&Route{"/", []string{"GET"}, HomeHandler, true},
-	&Route{"/developers", []string{"GET"}, AdminHandler, true},
+	&Route{"/admin", []string{"GET"}, HomeHandler, true},
+	&Route{"/admin/developers", []string{"GET"}, AdminHandler, true},
 	&Route{"/developers", []string{"POST"}, CreateDeveloperHandler, false},
 	&Route{"/developers/token", []string{"POST"}, CreateTokenHandler, false},
 	&Route{"/developers/{id}", []string{"GET"}, GetDeveloperByIDHandler, false},
 	&Route{"/developers/me", []string{"GET"}, GetCurrentDeveloperHandler, false},
-	&Route{"/developers/new", []string{"GET"}, NewDevHandler, true},
+	&Route{"/admin/developers/new", []string{"GET"}, NewDevHandler, true},
 	&Route{"/developers/{token}", []string{"PUT"}, UpdateDeveloperHandler, true},
-	&Route{"/developers/{token}", []string{"GET"}, DeveloperInfoHandler, true},
+	&Route{"/admin/developers/{token}", []string{"GET"}, DeveloperInfoHandler, true},
 	&Route{"/developers/{token}/pay", []string{"POST"}, PaymentHandler, false},
 	&Route{"/session/{id}", []string{"GET"}, SessionInfoHandler, false},
-	&Route{"/signup/{id}", []string{"GET"}, SignUpHandler, false},
+	&Route{"/admin/signup/{id}", []string{"GET"}, SignUpHandler, false},
 	&Route{"/signup", []string{"POST"}, CreateSessionHandler, false},
-	&Route{"/thanks!", []string{"GET"}, ThanksHandler, false},
+	&Route{"/admin/thanks!", []string{"GET"}, ThanksHandler, false},
 	&Route{"/reset/{email}", []string{"GET"}, ResetPasswordHandler, false},
 	&Route{"/developers/reset/{token}/{id}", []string{"GET"}, ResetHandler, false},
 	&Route{"/developers/reset/{token}", []string{"PUT"}, PasswordEditHandler, false},
@@ -91,14 +91,14 @@ func init() {
 	}
 }
 
-// GET /, Introduction
+// GET /admin, Introduction
 func HomeHandler(rw http.ResponseWriter, req *http.Request) {
 	if err := RenderTemplate(rw, "home", map[string]string{"Name": "Broome"}); err != nil {
 		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
 	}
 }
 
-// GET /developers, Admin Interface that lists developers
+// GET /admin/developers, Admin Interface that lists developers
 func AdminHandler(rw http.ResponseWriter, req *http.Request) {
 	ds, err := db.GetDevelopers(map[string]interface{}{})
 	if err != nil {
@@ -113,7 +113,7 @@ func AdminHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// GET /developers/{token}, Admin Interface for a single developer
+// GET /admin/developers/{token}, Admin Interface for a single developer
 func DeveloperInfoHandler(rw http.ResponseWriter, req *http.Request) {
 	token := mux.Vars(req)["token"]
 	d, err := db.GetDeveloper(map[string]interface{}{"token": token})
@@ -317,7 +317,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	res.Send(http.StatusOK)
 }
 
-// GET /developers/new, Admin helper for creating developers
+// GET /admin/developers/new, Admin helper for creating developers
 func NewDevHandler(rw http.ResponseWriter, req *http.Request) {
 	if err := RenderTemplate(rw, "new", map[string]string{}); err != nil {
 		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
@@ -615,7 +615,7 @@ func SessionInfoHandler(rw http.ResponseWriter, req *http.Request) {
 	return
 }
 
-// GET /signup/:id, Renders signup find. Will also handle billing
+// GET /admin/signup/:id, Renders signup find. Will also handle billing
 func SignUpHandler(rw http.ResponseWriter, req *http.Request) {
 	if err := RenderTemplate(rw, "signup", map[string]interface{}{
 		"isSignup":     true,
@@ -626,7 +626,7 @@ func SignUpHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// GET /thanks!, Renders a thank you/confirmation message stored in static/thanks.html
+// GET /admin/thanks!, Renders a thank you/confirmation message stored in static/thanks.html
 func ThanksHandler(rw http.ResponseWriter, req *http.Request) {
 	if err := RenderTemplate(rw, "thanks", map[string]interface{}{}); err != nil {
 		RenderTemplate(rw, "error", map[string]string{"Error": err.Error()})
