@@ -53,6 +53,7 @@ var Routes = []*Route{
 	&Route{"/developers", []string{"GET"}, AdminHandler, true},
 	&Route{"/developers", []string{"POST"}, CreateDeveloperHandler, false},
 	&Route{"/developers/token", []string{"POST"}, CreateTokenHandler, false},
+	&Route{"/developers/{id}", []string{"GET"}, GetDeveloperByIDHandler, false},
 	&Route{"/developers/me", []string{"GET"}, GetCurrentDeveloperHandler, false},
 	&Route{"/developers/new", []string{"GET"}, NewDevHandler, true},
 	&Route{"/developers/{token}", []string{"PUT"}, UpdateDeveloperHandler, true},
