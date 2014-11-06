@@ -375,6 +375,42 @@ func CreateTokenHandler(rw http.ResponseWriter, req *http.Request) {
 	res.Send(http.StatusOK)
 }
 
+// GET /developers/{id}, return public info for a developer
+func GetDeveloperByIDHandler(rw http.ResponseWriter, req *http.Request) {
+	res := NewResponder(rw, req)
+	id := mux.Vars(req)["id"]
+	token := req.FormValue("token")
+	if token == "" {
+		res.Body["status"] = "failed"
+		res.Body["error"] = "Valid token required."
+		res.Send(http.StatusBadRequest)
+		return
+	}
+
+	dev, err := db.GetDeveloperById(id)
+	if err != nil {
+		res.Body["status"] = "failed"
+		res.Body["error"] = err.Error()
+		res.Send(http.StatusInternalServerError)
+		return
+	}
+
+	// If the developer doing the request is not the dev found, only send
+	// minimal information.
+	if dev.Token != token {
+		dev = &schemas.Developer{
+			Email:               dev.Email,
+			Name:                dev.Name,
+			Version:             dev.Version,
+			IntegrationEngineer: dev.IntegrationEngineer,
+		}
+	}
+
+	res.Body["status"] = "found"
+	res.Body["developer"] = dev
+	res.Send(http.StatusOK)
+}
+
 // GET /developers/me, return the logged in developer
 func GetCurrentDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	res := NewResponder(rw, req)
