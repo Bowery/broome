@@ -11,13 +11,24 @@ import (
 	"reflect"
 	"testing"
 
-	"labix.org/v2/mgo/bson"
-
 	"github.com/Bowery/broome/db"
 	"github.com/Bowery/broome/requests"
+	"github.com/Bowery/gopackages/web"
+	"labix.org/v2/mgo/bson"
 )
 
-var broomeServer http.HandlerFunc = Handler().ServeHTTP
+var broomeServer http.HandlerFunc
+
+func init() {
+	server := web.NewServer(":3000", []web.Handler{
+		new(web.SlashHandler),
+		new(web.CorsHandler),
+	}, Routes)
+	server.Router.NotFoundHandler = &web.NotFoundHandler{r}
+	server.AuthHandler = &web.AuthHandler{Auth: AuthHandler}
+	server.Prestart()
+	broomeServer = server.Handler.ServeHTTP
+}
 
 func TestHealthzHandler(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(HealthzHandler))
