@@ -5,21 +5,24 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/Bowery/broome/db"
-	"github.com/Bowery/broome/util"
 	"io"
-	"labix.org/v2/mgo/bson"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Bowery/broome/db"
+	"github.com/Bowery/broome/util"
+	"github.com/Bowery/gopackages/requests"
+	"labix.org/v2/mgo/bson"
 )
 
 // NotFoundHandler just responds with a 404 and a message.
 var NotFoundHandler = http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-	res := &Responder{rw, req, map[string]interface{}{}}
-	res.Body["error"] = http.StatusText(http.StatusNotFound)
-	res.Send(http.StatusNotFound)
+	r.JSON(rw, http.StatusNotFound, map[string]string{
+		"status": requests.STATUS_FAILED,
+		"error":  http.StatusText(http.StatusNotFound),
+	})
 })
 
 // AuthHandler is a http.Handler that checks token is valid
@@ -120,8 +123,7 @@ func (ch *CorsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	rw.Header().Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 
 	if req.Method == "OPTIONS" {
-		res := NewResponder(rw, req)
-		res.Send(http.StatusOK)
+		rw.WriteHeader(http.StatusOK)
 		return
 	}
 

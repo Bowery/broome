@@ -4,6 +4,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -18,10 +19,12 @@ import (
 	"github.com/Bowery/broome/util"
 	"github.com/Bowery/gopackages/config"
 	"github.com/Bowery/gopackages/keen"
+	statuses "github.com/Bowery/gopackages/requests"
 	"github.com/Bowery/gopackages/schemas"
 	"github.com/bradrydzewski/go.stripe"
 	"github.com/gorilla/mux"
 	"github.com/mattbaird/gochimp"
+	"github.com/unrolled/render"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 )
@@ -38,6 +41,11 @@ var (
 	keenC           *keen.Client
 	stripePublicKey string
 )
+
+var r = render.New(render.Options{
+	IndentJSON:    true,
+	IsDevelopment: true,
+})
 
 // Route is a single named route with a http.HandlerFunc.
 type Route struct {
@@ -136,19 +144,20 @@ func DeveloperInfoHandler(rw http.ResponseWriter, req *http.Request) {
 
 // PUT /developers/{token}, edits a developer
 func UpdateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
-	res := NewResponder(rw, req)
 	token := mux.Vars(req)["token"]
 	if token == "" {
-		res.Body["status"] = "failed"
-		res.Body["error"] = "missing token"
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  "missing token",
+		})
 		return
 	}
 
 	if err := req.ParseForm(); err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
@@ -157,16 +166,20 @@ func UpdateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 
 	u, err := db.GetDeveloper(query)
 	if err != nil {
-		res.Body["status"] = "failed"
-		res.Send(http.StatusInternalServerError)
+		r.JSON(rw, http.StatusInternalServerError, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
 	if password := req.FormValue("password"); password != "" {
 		oldpass := req.FormValue("oldpassword")
 		if oldpass == "" || util.HashPassword(oldpass, u.Salt) != u.Password {
-			res.Body["error"] = "Old password is incorrect."
-			res.Send(http.StatusBadRequest)
+			r.JSON(rw, http.StatusBadRequest, map[string]string{
+				"status": statuses.STATUS_FAILED,
+				"error":  "Old password is incorrect.",
+			})
 			return
 		}
 
@@ -190,20 +203,21 @@ func UpdateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := db.UpdateDeveloper(query, update); err != nil {
-		res.Body["status"] = "failed"
-		res.Send(http.StatusInternalServerError)
+		r.JSON(rw, http.StatusInternalServerError, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
-	res.Body["status"] = "updated"
-	res.Body["update"] = update
-	res.Send(http.StatusOK)
+	r.JSON(rw, http.StatusOK, map[string]interface{}{
+		"status": statuses.STATUS_UPDATED,
+		"update": update,
+	})
 }
 
 // POST /developers, Creates a new developer
 func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
-	res := NewResponder(rw, req)
-
 	type engineer struct {
 		Name  string
 		Email string
@@ -222,16 +236,18 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	decoder := json.NewDecoder(req.Body)
 	err := decoder.Decode(&body)
 	if err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
 	if body.Email == "" || body.Password == "" {
-		res.Body["status"] = "failed"
-		res.Body["error"] = "Email and Password Required."
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  "Email and Password Required.",
+		})
 		return
 	}
 
@@ -247,8 +263,10 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 
 	_, err = db.GetDeveloper(bson.M{"email": u.Email})
 	if err == nil {
-		res.Body["error"] = "email already exists"
-		res.Send(http.StatusInternalServerError)
+		r.JSON(rw, http.StatusInternalServerError, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  "email already exists",
+		})
 		return
 	}
 
@@ -257,9 +275,10 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 			ListId: "200e892f56",
 			Email:  gochimp.Email{Email: u.Email},
 		}); err != nil {
-			res.Body["status"] = "failed"
-			res.Body["error"] = err.Error()
-			res.Send(http.StatusBadRequest)
+			r.JSON(rw, http.StatusBadRequest, map[string]string{
+				"status": statuses.STATUS_FAILED,
+				"error":  err.Error(),
+			})
 			return
 		}
 
@@ -269,9 +288,10 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 		})
 
 		if err != nil {
-			res.Body["status"] = "failed"
-			res.Body["error"] = err.Error()
-			res.Send(http.StatusBadRequest)
+			r.JSON(rw, http.StatusBadRequest, map[string]string{
+				"status": statuses.STATUS_FAILED,
+				"error":  err.Error(),
+			})
 			return
 		}
 
@@ -287,17 +307,19 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 		}, false)
 
 		if err != nil {
-			res.Body["status"] = "failed"
-			res.Body["error"] = err.Error()
-			res.Send(http.StatusBadRequest)
+			r.JSON(rw, http.StatusBadRequest, map[string]string{
+				"status": statuses.STATUS_FAILED,
+				"error":  err.Error(),
+			})
 			return
 		}
 	}
 
 	if err := db.Save(u); err != nil {
-		res.Body["status"] = "failed"
-		res.Body["err"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
@@ -311,10 +333,10 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 		http.PostForm("https://slack.com/api/chat.postMessage", payload)
 	}
 
-	res.Body["status"] = "created"
-	res.Body["developer"] = u
-
-	res.Send(http.StatusOK)
+	r.JSON(rw, http.StatusOK, map[string]interface{}{
+		"status":    statuses.STATUS_CREATED,
+		"developer": u,
+	})
 }
 
 // GET /admin/developers/new, Admin helper for creating developers
@@ -326,39 +348,42 @@ func NewDevHandler(rw http.ResponseWriter, req *http.Request) {
 
 // POST /developer/token, logs in a user by creating a new token
 func CreateTokenHandler(rw http.ResponseWriter, req *http.Request) {
-	res := NewResponder(rw, req)
 	var body requests.LoginReq
 	decoder := json.NewDecoder(req.Body)
 	err := decoder.Decode(&body)
 	if err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
 	email := body.Email
 	password := body.Password
 	if email == "" || password == "" {
-		res.Body["status"] = "failed"
-		res.Body["error"] = "Email and Password Required."
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  "Email and Password Required.",
+		})
 		return
 	}
 
 	query := map[string]interface{}{"email": email}
 	u, err := db.GetDeveloper(query)
 	if err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = "No such developer with email " + email + "."
-		res.Send(http.StatusInternalServerError)
+		r.JSON(rw, http.StatusInternalServerError, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  "No such developer with email " + email + ".",
+		})
 		return
 	}
 
 	if util.HashPassword(password, u.Salt) != u.Password {
-		res.Body["status"] = "failed"
-		res.Body["error"] = "Incorrect Password"
-		res.Send(http.StatusInternalServerError)
+		r.JSON(rw, http.StatusInternalServerError, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  "Incorrect Password",
+		})
 		return
 	}
 
@@ -366,33 +391,37 @@ func CreateTokenHandler(rw http.ResponseWriter, req *http.Request) {
 
 	update := map[string]interface{}{"token": token}
 	if err := db.UpdateDeveloper(query, update); err != nil {
-		res.Body["status"] = "failed"
-		res.Send(http.StatusInternalServerError)
+		r.JSON(rw, http.StatusInternalServerError, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
-	res.Body["status"] = "created"
-	res.Body["token"] = token
-	res.Send(http.StatusOK)
+	r.JSON(rw, http.StatusOK, map[string]interface{}{
+		"status": statuses.STATUS_CREATED,
+		"token":  token,
+	})
 }
 
 // GET /developers/{id}, return public info for a developer
 func GetDeveloperByIDHandler(rw http.ResponseWriter, req *http.Request) {
-	res := NewResponder(rw, req)
 	id := mux.Vars(req)["id"]
 	token := req.FormValue("token")
 	if token == "" {
-		res.Body["status"] = "failed"
-		res.Body["error"] = "Valid token required."
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  "Valid token required.",
+		})
 		return
 	}
 
 	dev, err := db.GetDeveloperById(id)
 	if err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusInternalServerError)
+		r.JSON(rw, http.StatusInternalServerError, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
@@ -407,56 +436,58 @@ func GetDeveloperByIDHandler(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	res.Body["status"] = "found"
-	res.Body["developer"] = dev
-	res.Send(http.StatusOK)
+	r.JSON(rw, http.StatusOK, map[string]interface{}{
+		"status":    statuses.STATUS_FOUND,
+		"developer": dev,
+	})
 }
 
 // GET /developers/me, return the logged in developer
 func GetCurrentDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
-	res := NewResponder(rw, req)
-
 	if err := req.ParseForm(); err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
 	token := req.FormValue("token")
 	if token == "" {
-		res.Body["status"] = "failed"
-		res.Body["error"] = "Valid token required."
-		res.Send(http.StatusInternalServerError)
+		r.JSON(rw, http.StatusInternalServerError, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  "Valid token required.",
+		})
 		return
 	}
 
 	query := map[string]interface{}{"token": token}
 	u, err := db.GetDeveloper(query)
 	if err != nil {
-		res.Body["status"] = "failed"
 		if err == mgo.ErrNotFound {
-			res.Body["error"] = "Invalid Token."
-		} else {
-			res.Body["error"] = err.Error()
+			err = errors.New("Invalid Token.")
 		}
 
-		res.Send(http.StatusInternalServerError)
+		r.JSON(rw, http.StatusInternalServerError, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
-	res.Body["status"] = "found"
-	res.Body["developer"] = u
-	res.Send(http.StatusOK)
+	r.JSON(rw, http.StatusOK, map[string]interface{}{
+		"status":    statuses.STATUS_FOUND,
+		"developer": u,
+	})
 }
 
 // POST /session, Creates a new user and charges them for the first year.
 func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
-	res := NewResponder(rw, req)
 	if err := req.ParseForm(); err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
@@ -476,35 +507,39 @@ func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
 
 	// Silent Signup from cli and not signup form. Will not charge them, but will give them a free month
 	if err := db.Save(u); err != nil {
-		res.Body["status"] = "failed"
-		res.Body["err"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
-	res.Body["status"] = "created"
-	res.Body["developer"] = u
-	res.Send(http.StatusOK)
+
+	r.JSON(rw, http.StatusOK, map[string]interface{}{
+		"status":    statuses.STATUS_CREATED,
+		"developer": u,
+	})
 	keenC.AddEvent("crosby trial new", map[string]*schemas.Developer{"user": u})
 }
 
 // POST /developers/{token}/pay payments
 func PaymentHandler(rw http.ResponseWriter, req *http.Request) {
-	res := NewResponder(rw, req)
 	var body requests.PaymentReq
 	decoder := json.NewDecoder(req.Body)
 	err := decoder.Decode(&body)
 	if err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
 	d, err := db.GetDeveloper(map[string]interface{}{"token": mux.Vars(req)["token"]})
 	if err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
@@ -517,9 +552,10 @@ func PaymentHandler(rw http.ResponseWriter, req *http.Request) {
 
 	customer, err := stripe.Customers.Create(&customerParams)
 	if err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
@@ -538,48 +574,49 @@ func PaymentHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := db.UpdateDeveloper(map[string]interface{}{"token": d.Token}, map[string]interface{}{"isPaid": true}); err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusInternalServerError)
+		r.JSON(rw, http.StatusInternalServerError, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
+	r.JSON(rw, http.StatusOK, map[string]interface{}{
+		"status":    statuses.STATUS_SUCCESS,
+		"developer": d,
+	})
 	keenC.AddEvent("bowery payment new", map[string]*schemas.Developer{"developer": d})
-
-	res.Body["status"] = "success"
-	res.Body["developer"] = d
-	res.Send(http.StatusOK)
-	return
 }
 
 // GET /session/{id}, Gets user by ID. If their license has expired it attempts
 // to charge them again. It is called everytime crosby is run.
 func SessionInfoHandler(rw http.ResponseWriter, req *http.Request) {
-	res := NewResponder(rw, req)
-
 	id := mux.Vars(req)["id"]
 	fmt.Println("Getting user by id", id)
 	u, err := db.GetDeveloperById(id)
 	if err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		keenC.AddEvent("crosby session failed", map[string]string{"id": id})
 		return
 	}
 
 	if u.Expiration.After(time.Now()) {
-		res.Body["status"] = "found"
-		res.Body["developer"] = u
-		res.Send(http.StatusOK)
+		r.JSON(rw, http.StatusOK, map[string]interface{}{
+			"status":    statuses.STATUS_FOUND,
+			"developer": u,
+		})
 		keenC.AddEvent("crosby session found", map[string]*schemas.Developer{"user": u})
 		return
 	}
 
 	if u.StripeToken == "" {
-		res.Body["status"] = "expired"
-		res.Body["developer"] = u
-		res.Send(http.StatusOK)
+		r.JSON(rw, http.StatusOK, map[string]interface{}{
+			"status":    statuses.STATUS_EXPIRED,
+			"developer": u,
+		})
 		keenC.AddEvent("crosby trial expired", map[string]*schemas.Developer{"user": u})
 		return
 	}
@@ -594,25 +631,27 @@ func SessionInfoHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 	_, err = stripe.Charges.Create(&chargeParams)
 	if err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		keenC.AddEvent("crosby payment failed", map[string]*schemas.Developer{"user": u})
 		return
 	}
 	u.Expiration = time.Now()
 	if err := db.Save(u); err != nil { // not actually a save, but an update. fix
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
-	res.Body["status"] = "found"
-	res.Body["user"] = u
-	res.Send(http.StatusOK)
+	r.JSON(rw, http.StatusOK, map[string]interface{}{
+		"status": statuses.STATUS_FOUND,
+		"user":   u,
+	})
 	keenC.AddEvent("crosby payment recurred", map[string]*schemas.Developer{"user": u})
-	return
 }
 
 // GET /admin/signup/:id, Renders signup find. Will also handle billing
@@ -635,22 +674,22 @@ func ThanksHandler(rw http.ResponseWriter, req *http.Request) {
 
 // GET /reset/{email}, Request link to reset password--emails user
 func ResetPasswordHandler(rw http.ResponseWriter, req *http.Request) {
-	res := NewResponder(rw, req)
-
 	// TODO check empty token
 	email := mux.Vars(req)["email"]
 	if email == "" {
-		res.Body["status"] = "failed"
-		res.Body["error"] = "no email provided"
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  "no email provided",
+		})
 		return
 	}
 
 	u, err := db.GetDeveloper(map[string]interface{}{"email": email})
 	if err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
@@ -661,9 +700,10 @@ func ResetPasswordHandler(rw http.ResponseWriter, req *http.Request) {
 		"engineer": u.IntegrationEngineer,
 	})
 	if err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
@@ -679,14 +719,16 @@ func ResetPasswordHandler(rw http.ResponseWriter, req *http.Request) {
 	}, false)
 
 	if err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
-	res.Body["status"] = "success"
-	res.Send(http.StatusOK)
+	r.JSON(rw, http.StatusOK, map[string]string{
+		"status": statuses.STATUS_SUCCESS,
+	})
 }
 
 // GET /developers/{token}/reset/{id}, Serves from where users can reset their password.
@@ -715,41 +757,38 @@ func ResetHandler(rw http.ResponseWriter, req *http.Request) {
 
 // PUT /developers/{token}/reset, Edit password
 func PasswordEditHandler(rw http.ResponseWriter, req *http.Request) {
-	res := NewResponder(rw, req)
-
 	if err := req.ParseForm(); err != nil {
-		res.Body["status"] = "failed"
-		res.Body["error"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
 	id := req.FormValue("id")
 	u, err := db.GetDeveloperById(id)
 	if err != nil {
-		res.Body["status"] = "failed"
-		res.Body["err"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
 	query := map[string]interface{}{"token": mux.Vars(req)["token"]}
 	update := map[string]interface{}{"password": util.HashPassword(req.FormValue("new"), u.Salt)}
 	if err := db.UpdateDeveloper(query, update); err != nil {
-		res.Body["status"] = "failed"
-		res.Body["err"] = err.Error()
-		res.Send(http.StatusBadRequest)
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": statuses.STATUS_FAILED,
+			"error":  err.Error(),
+		})
 		return
 	}
 
-	res.Body["status"] = "success"
-	res.Body["user"], err = json.Marshal(u)
-	if err != nil {
-		res.Body["status"] = "failed"
-		res.Send(http.StatusInternalServerError)
-		return
-	}
-	res.Send(http.StatusOK)
+	r.JSON(rw, http.StatusOK, map[string]interface{}{
+		"status": statuses.STATUS_SUCCESS,
+		"user":   u,
+	})
 }
 
 // GET /healthz, Indicates that the service is up
