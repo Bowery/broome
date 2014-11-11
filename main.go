@@ -5,6 +5,7 @@ package main
 import (
 	"os"
 
+	"github.com/Bowery/gopackages/config"
 	"github.com/Bowery/gopackages/web"
 )
 
@@ -17,6 +18,7 @@ func main() {
 	server := web.NewServer(port, []web.Handler{
 		new(web.SlashHandler),
 		new(web.CorsHandler),
+		&web.StatHandler{Key: config.StatHatKey, Name: "broome"},
 	}, Routes)
 	server.Router.NotFoundHandler = &web.NotFoundHandler{r}
 	server.AuthHandler = &web.AuthHandler{Auth: AuthHandler}
