@@ -242,7 +242,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 		Token:               util.HashToken(),
 		IntegrationEngineer: integrationEngineer.Name,
 		IsPaid:              false,
-		CreatedAt:           time.Now().Unix(),
+		CreatedAt:           time.Now().UnixNano() / int64(time.Millisecond),
 	}
 
 	_, err = db.GetDeveloper(bson.M{"email": u.Email})
