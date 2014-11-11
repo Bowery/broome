@@ -21,6 +21,7 @@ import (
 	"github.com/Bowery/gopackages/keen"
 	statuses "github.com/Bowery/gopackages/requests"
 	"github.com/Bowery/gopackages/schemas"
+	"github.com/Bowery/gopackages/web"
 	"github.com/bradrydzewski/go.stripe"
 	"github.com/gorilla/mux"
 	"github.com/mattbaird/gochimp"
@@ -47,35 +48,27 @@ var r = render.New(render.Options{
 	IsDevelopment: true,
 })
 
-// Route is a single named route with a http.HandlerFunc.
-type Route struct {
-	Path    string
-	Methods []string
-	Handler http.HandlerFunc
-	Auth    bool
-}
-
 // List of named routes.
-var Routes = []*Route{
-	&Route{"/admin", []string{"GET"}, HomeHandler, true},
-	&Route{"/admin/developers", []string{"GET"}, AdminHandler, true},
-	&Route{"/developers", []string{"POST"}, CreateDeveloperHandler, false},
-	&Route{"/developers/token", []string{"POST"}, CreateTokenHandler, false},
-	&Route{"/developers/me", []string{"GET"}, GetCurrentDeveloperHandler, false},
-	&Route{"/developers/{id}", []string{"GET"}, GetDeveloperByIDHandler, false},
-	&Route{"/admin/developers/new", []string{"GET"}, NewDevHandler, true},
-	&Route{"/developers/{token}", []string{"PUT"}, UpdateDeveloperHandler, true},
-	&Route{"/admin/developers/{token}", []string{"GET"}, DeveloperInfoHandler, true},
-	&Route{"/developers/{token}/pay", []string{"POST"}, PaymentHandler, false},
-	&Route{"/session/{id}", []string{"GET"}, SessionInfoHandler, false},
-	&Route{"/admin/signup/{id}", []string{"GET"}, SignUpHandler, false},
-	&Route{"/signup", []string{"POST"}, CreateSessionHandler, false},
-	&Route{"/admin/thanks!", []string{"GET"}, ThanksHandler, false},
-	&Route{"/reset/{email}", []string{"GET"}, ResetPasswordHandler, false},
-	&Route{"/developers/reset/{token}/{id}", []string{"GET"}, ResetHandler, false},
-	&Route{"/developers/reset/{token}", []string{"PUT"}, PasswordEditHandler, false},
-	&Route{"/healthz", []string{"GET"}, HealthzHandler, false},
-	&Route{"/static/{rest}", []string{"GET"}, StaticHandler, false},
+var Routes = []web.Route{
+	{"GET", "/admin", HomeHandler, true},
+	{"GET", "/admin/developers", AdminHandler, true},
+	{"POST", "/developers", CreateDeveloperHandler, false},
+	{"POST", "/developers/token", CreateTokenHandler, false},
+	{"GET", "/developers/me", GetCurrentDeveloperHandler, false},
+	{"GET", "/developers/{id}", GetDeveloperByIDHandler, false},
+	{"GET", "/admin/developers/new", NewDevHandler, true},
+	{"PUT", "/developers/{token}", UpdateDeveloperHandler, true},
+	{"GET", "/admin/developers/{token}", DeveloperInfoHandler, true},
+	{"POST", "/developers/{token}/pay", PaymentHandler, false},
+	{"GET", "/session/{id}", SessionInfoHandler, false},
+	{"GET", "/admin/signup/{id}", SignUpHandler, false},
+	{"POST", "/signup", CreateSessionHandler, false},
+	{"GET", "/admin/thanks!", ThanksHandler, false},
+	{"GET", "/reset/{email}", ResetPasswordHandler, false},
+	{"GET", "/developers/reset/{token}/{id}", ResetHandler, false},
+	{"PUT", "/developers/reset/{token}", PasswordEditHandler, false},
+	{"GET", "/healthz", HealthzHandler, false},
+	{"GET", "/static/{rest}", StaticHandler, false},
 }
 
 func init() {
@@ -97,6 +90,26 @@ func init() {
 		WriteKey:  config.KeenWriteKey,
 		ProjectID: config.KeenProjectID,
 	}
+}
+
+func AuthHandler(req *http.Request, user, pass string) (bool, error) {
+	query := bson.M{}
+	if pass == "" {
+		query["token"] = user
+	} else {
+		query["email"] = user
+	}
+
+	dev, err := db.GetDeveloper(query)
+	if err != nil || dev.ID == "" {
+		return false, err
+	}
+
+	if pass != "" && dev.Password != util.HashPassword(pass, dev.Salt) {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 // GET /admin, Introduction
