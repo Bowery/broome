@@ -16,11 +16,11 @@ import (
 
 	"github.com/Bowery/broome/db"
 	"github.com/Bowery/broome/requests"
-	"github.com/Bowery/broome/util"
 	"github.com/Bowery/gopackages/config"
 	"github.com/Bowery/gopackages/keen"
 	statuses "github.com/Bowery/gopackages/requests"
 	"github.com/Bowery/gopackages/schemas"
+	"github.com/Bowery/gopackages/util"
 	"github.com/Bowery/gopackages/web"
 	"github.com/bradrydzewski/go.stripe"
 	"github.com/gorilla/mux"

@@ -2,15 +2,16 @@
 package db
 
 import (
-	"code.google.com/p/go-uuid/uuid"
 	"errors"
-	"github.com/Bowery/broome/util"
+	"os"
+	"time"
+
+	"code.google.com/p/go-uuid/uuid"
 	"github.com/Bowery/gopackages/schemas"
+	"github.com/Bowery/gopackages/util"
 	"github.com/cenkalti/backoff"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
-	"os"
-	"time"
 )
 
 var devs *mgo.Collection
