@@ -53,6 +53,7 @@ var Routes = []web.Route{
 	{"GET", "/admin/developers", AdminHandler, true},
 	{"POST", "/developers", CreateDeveloperHandler, false},
 	{"POST", "/developers/token", CreateTokenHandler, false},
+	{"POST", "/developers/check-admin", CheckAdminHandler, false},
 	{"GET", "/developers/me", GetCurrentDeveloperHandler, false},
 	{"GET", "/developers/{id}", GetDeveloperByIDHandler, false},
 	{"GET", "/admin/developers/new", NewDevHandler, true},
@@ -413,6 +414,59 @@ func CreateTokenHandler(rw http.ResponseWriter, req *http.Request) {
 	r.JSON(rw, http.StatusOK, map[string]interface{}{
 		"status": requests.STATUS_CREATED,
 		"token":  token,
+	})
+}
+
+func CheckAdminHandler(rw http.ResponseWriter, req *http.Request) {
+	var body requests.LoginReq
+	decoder := json.NewDecoder(req.Body)
+	err := decoder.Decode(&body)
+	if err != nil {
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": requests.STATUS_FAILED,
+			"error":  err.Error(),
+		})
+		return
+	}
+
+	email := body.Email
+	password := body.Password
+	if email == "" || password == "" {
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": requests.STATUS_FAILED,
+			"error":  "Email and Password Required.",
+		})
+		return
+	}
+
+	query := map[string]interface{}{"email": email}
+	u, err := db.GetDeveloper(query)
+	if err != nil {
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": requests.STATUS_FAILED,
+			"error":  "not admin",
+		})
+		return
+	}
+
+	if util.HashPassword(password, u.Salt) != u.Password {
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": requests.STATUS_FAILED,
+			"error":  "not admin",
+		})
+		return
+	}
+
+	if !u.IsAdmin {
+		r.JSON(rw, http.StatusBadRequest, map[string]string{
+			"status": requests.STATUS_FAILED,
+			"error":  "not admin",
+		})
+		return
+	}
+
+	r.JSON(rw, http.StatusOK, map[string]string{
+		"status": requests.STATUS_SUCCESS,
 	})
 }
 
