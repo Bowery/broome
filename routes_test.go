@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/Bowery/broome/db"
-	"github.com/Bowery/broome/requests"
+	"github.com/Bowery/gopackages/requests"
 	"github.com/Bowery/gopackages/web"
 	"labix.org/v2/mgo/bson"
 )
