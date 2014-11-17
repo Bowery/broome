@@ -20,7 +20,7 @@ func main() {
 		new(web.CorsHandler),
 		&web.StatHandler{Key: config.StatHatKey, Name: "broome"},
 	}, Routes)
-	server.Router.NotFoundHandler = &web.NotFoundHandler{r}
+	server.Router.NotFoundHandler = &web.NotFoundHandler{renderer}
 	server.AuthHandler = &web.AuthHandler{Auth: AuthHandler}
 	server.ListenAndServe()
 }
