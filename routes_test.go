@@ -24,7 +24,6 @@ func init() {
 		new(web.SlashHandler),
 		new(web.CorsHandler),
 	}, Routes)
-	server.Router.NotFoundHandler = &web.NotFoundHandler{renderer}
 	server.AuthHandler = &web.AuthHandler{Auth: AuthHandler}
 	server.Prestart()
 	broomeServer = server.Handler.ServeHTTP
