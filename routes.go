@@ -160,7 +160,7 @@ func UpdateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	token := mux.Vars(req)["token"]
 	if token == "" {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  "missing token",
 		})
 		return
@@ -168,7 +168,7 @@ func UpdateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 
 	if err := req.ParseForm(); err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
@@ -180,7 +180,7 @@ func UpdateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	u, err := db.GetDeveloper(query)
 	if err != nil {
 		renderer.JSON(rw, http.StatusInternalServerError, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
@@ -190,7 +190,7 @@ func UpdateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 		oldpass := req.FormValue("oldpassword")
 		if oldpass == "" || util.HashPassword(oldpass, u.Salt) != u.Password {
 			renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-				"status": requests.STATUS_FAILED,
+				"status": requests.StatusFailed,
 				"error":  "Old password is incorrect.",
 			})
 			return
@@ -217,14 +217,14 @@ func UpdateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 
 	if err := db.UpdateDeveloper(query, update); err != nil {
 		renderer.JSON(rw, http.StatusInternalServerError, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
 	}
 
 	renderer.JSON(rw, http.StatusOK, map[string]interface{}{
-		"status": requests.STATUS_UPDATED,
+		"status": requests.StatusUpdated,
 		"update": update,
 	})
 }
@@ -250,7 +250,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	err := decoder.Decode(&body)
 	if err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
@@ -258,7 +258,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 
 	if body.Email == "" || body.Password == "" {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  "Email and Password Required.",
 		})
 		return
@@ -277,7 +277,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	_, err = db.GetDeveloper(bson.M{"email": u.Email})
 	if err == nil {
 		renderer.JSON(rw, http.StatusInternalServerError, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  "email already exists",
 		})
 		return
@@ -289,7 +289,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 			Email:  gochimp.Email{Email: u.Email},
 		}); err != nil {
 			renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-				"status": requests.STATUS_FAILED,
+				"status": requests.StatusFailed,
 				"error":  err.Error(),
 			})
 			return
@@ -302,7 +302,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 
 		if err != nil {
 			renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-				"status": requests.STATUS_FAILED,
+				"status": requests.StatusFailed,
 				"error":  err.Error(),
 			})
 			return
@@ -321,7 +321,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 
 		if err != nil {
 			renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-				"status": requests.STATUS_FAILED,
+				"status": requests.StatusFailed,
 				"error":  err.Error(),
 			})
 			return
@@ -330,7 +330,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 
 	if err := db.Save(u); err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
@@ -347,7 +347,7 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	renderer.JSON(rw, http.StatusOK, map[string]interface{}{
-		"status":    requests.STATUS_CREATED,
+		"status":    requests.StatusCreated,
 		"developer": u,
 	})
 }
@@ -366,7 +366,7 @@ func CreateTokenHandler(rw http.ResponseWriter, req *http.Request) {
 	err := decoder.Decode(&body)
 	if err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
@@ -376,7 +376,7 @@ func CreateTokenHandler(rw http.ResponseWriter, req *http.Request) {
 	password := body.Password
 	if email == "" || password == "" {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  "Email and Password Required.",
 		})
 		return
@@ -386,7 +386,7 @@ func CreateTokenHandler(rw http.ResponseWriter, req *http.Request) {
 	u, err := db.GetDeveloper(query)
 	if err != nil {
 		renderer.JSON(rw, http.StatusInternalServerError, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  "No such developer with email " + email + ".",
 		})
 		return
@@ -394,7 +394,7 @@ func CreateTokenHandler(rw http.ResponseWriter, req *http.Request) {
 
 	if util.HashPassword(password, u.Salt) != u.Password {
 		renderer.JSON(rw, http.StatusInternalServerError, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  "Incorrect Password",
 		})
 		return
@@ -405,14 +405,14 @@ func CreateTokenHandler(rw http.ResponseWriter, req *http.Request) {
 	update := map[string]interface{}{"token": token}
 	if err := db.UpdateDeveloper(query, update); err != nil {
 		renderer.JSON(rw, http.StatusInternalServerError, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
 	}
 
 	renderer.JSON(rw, http.StatusOK, map[string]interface{}{
-		"status": requests.STATUS_CREATED,
+		"status": requests.StatusCreated,
 		"token":  token,
 	})
 }
@@ -423,7 +423,7 @@ func CheckAdminHandler(rw http.ResponseWriter, req *http.Request) {
 	err := decoder.Decode(&body)
 	if err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
@@ -433,7 +433,7 @@ func CheckAdminHandler(rw http.ResponseWriter, req *http.Request) {
 	password := body.Password
 	if email == "" || password == "" {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  "Email and Password Required.",
 		})
 		return
@@ -443,7 +443,7 @@ func CheckAdminHandler(rw http.ResponseWriter, req *http.Request) {
 	u, err := db.GetDeveloper(query)
 	if err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  "not admin",
 		})
 		return
@@ -451,7 +451,7 @@ func CheckAdminHandler(rw http.ResponseWriter, req *http.Request) {
 
 	if util.HashPassword(password, u.Salt) != u.Password {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  "not admin",
 		})
 		return
@@ -459,14 +459,14 @@ func CheckAdminHandler(rw http.ResponseWriter, req *http.Request) {
 
 	if !u.IsAdmin {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  "not admin",
 		})
 		return
 	}
 
 	renderer.JSON(rw, http.StatusOK, map[string]string{
-		"status": requests.STATUS_SUCCESS,
+		"status": requests.StatusSuccess,
 	})
 }
 
@@ -476,7 +476,7 @@ func GetDeveloperByIDHandler(rw http.ResponseWriter, req *http.Request) {
 	token := req.FormValue("token")
 	if token == "" {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  "Valid token required.",
 		})
 		return
@@ -485,7 +485,7 @@ func GetDeveloperByIDHandler(rw http.ResponseWriter, req *http.Request) {
 	dev, err := db.GetDeveloperById(id)
 	if err != nil {
 		renderer.JSON(rw, http.StatusInternalServerError, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
@@ -503,7 +503,7 @@ func GetDeveloperByIDHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	renderer.JSON(rw, http.StatusOK, map[string]interface{}{
-		"status":    requests.STATUS_FOUND,
+		"status":    requests.StatusFound,
 		"developer": dev,
 	})
 }
@@ -512,7 +512,7 @@ func GetDeveloperByIDHandler(rw http.ResponseWriter, req *http.Request) {
 func GetCurrentDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
@@ -521,7 +521,7 @@ func GetCurrentDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 	token := req.FormValue("token")
 	if token == "" {
 		renderer.JSON(rw, http.StatusInternalServerError, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  "Valid token required.",
 		})
 		return
@@ -535,14 +535,14 @@ func GetCurrentDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 		}
 
 		renderer.JSON(rw, http.StatusInternalServerError, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
 	}
 
 	renderer.JSON(rw, http.StatusOK, map[string]interface{}{
-		"status":    requests.STATUS_FOUND,
+		"status":    requests.StatusFound,
 		"developer": u,
 	})
 }
@@ -551,7 +551,7 @@ func GetCurrentDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
@@ -574,14 +574,14 @@ func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
 	// Silent Signup from cli and not signup form. Will not charge them, but will give them a free month
 	if err := db.Save(u); err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
 	}
 
 	renderer.JSON(rw, http.StatusOK, map[string]interface{}{
-		"status":    requests.STATUS_CREATED,
+		"status":    requests.StatusCreated,
 		"developer": u,
 	})
 	keenC.AddEvent("crosby trial new", map[string]*schemas.Developer{"user": u})
@@ -594,7 +594,7 @@ func PaymentHandler(rw http.ResponseWriter, req *http.Request) {
 	err := decoder.Decode(&body)
 	if err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
@@ -603,7 +603,7 @@ func PaymentHandler(rw http.ResponseWriter, req *http.Request) {
 	d, err := db.GetDeveloper(map[string]interface{}{"token": mux.Vars(req)["token"]})
 	if err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
@@ -619,7 +619,7 @@ func PaymentHandler(rw http.ResponseWriter, req *http.Request) {
 	customer, err := stripe.Customers.Create(&customerParams)
 	if err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
@@ -641,14 +641,14 @@ func PaymentHandler(rw http.ResponseWriter, req *http.Request) {
 
 	if err := db.UpdateDeveloper(map[string]interface{}{"token": d.Token}, map[string]interface{}{"isPaid": true}); err != nil {
 		renderer.JSON(rw, http.StatusInternalServerError, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
 	}
 
 	renderer.JSON(rw, http.StatusOK, map[string]interface{}{
-		"status":    requests.STATUS_SUCCESS,
+		"status":    requests.StatusSuccess,
 		"developer": d,
 	})
 	keenC.AddEvent("bowery payment new", map[string]*schemas.Developer{"developer": d})
@@ -662,7 +662,7 @@ func SessionInfoHandler(rw http.ResponseWriter, req *http.Request) {
 	u, err := db.GetDeveloperById(id)
 	if err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		keenC.AddEvent("crosby session failed", map[string]string{"id": id})
@@ -671,7 +671,7 @@ func SessionInfoHandler(rw http.ResponseWriter, req *http.Request) {
 
 	if u.Expiration.After(time.Now()) {
 		renderer.JSON(rw, http.StatusOK, map[string]interface{}{
-			"status":    requests.STATUS_FOUND,
+			"status":    requests.StatusFound,
 			"developer": u,
 		})
 		keenC.AddEvent("crosby session found", map[string]*schemas.Developer{"user": u})
@@ -680,7 +680,7 @@ func SessionInfoHandler(rw http.ResponseWriter, req *http.Request) {
 
 	if u.StripeToken == "" {
 		renderer.JSON(rw, http.StatusOK, map[string]interface{}{
-			"status":    requests.STATUS_EXPIRED,
+			"status":    requests.StatusExpired,
 			"developer": u,
 		})
 		keenC.AddEvent("crosby trial expired", map[string]*schemas.Developer{"user": u})
@@ -698,7 +698,7 @@ func SessionInfoHandler(rw http.ResponseWriter, req *http.Request) {
 	_, err = stripe.Charges.Create(&chargeParams)
 	if err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		keenC.AddEvent("crosby payment failed", map[string]*schemas.Developer{"user": u})
@@ -707,14 +707,14 @@ func SessionInfoHandler(rw http.ResponseWriter, req *http.Request) {
 	u.Expiration = time.Now()
 	if err := db.Save(u); err != nil { // not actually a save, but an update. fix
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
 	}
 
 	renderer.JSON(rw, http.StatusOK, map[string]interface{}{
-		"status": requests.STATUS_FOUND,
+		"status": requests.StatusFound,
 		"user":   u,
 	})
 	keenC.AddEvent("crosby payment recurred", map[string]*schemas.Developer{"user": u})
@@ -744,7 +744,7 @@ func ResetPasswordHandler(rw http.ResponseWriter, req *http.Request) {
 	email := mux.Vars(req)["email"]
 	if email == "" {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  "no email provided",
 		})
 		return
@@ -753,7 +753,7 @@ func ResetPasswordHandler(rw http.ResponseWriter, req *http.Request) {
 	u, err := db.GetDeveloper(map[string]interface{}{"email": email})
 	if err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
@@ -767,7 +767,7 @@ func ResetPasswordHandler(rw http.ResponseWriter, req *http.Request) {
 	})
 	if err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
@@ -786,14 +786,14 @@ func ResetPasswordHandler(rw http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
 	}
 
 	renderer.JSON(rw, http.StatusOK, map[string]string{
-		"status": requests.STATUS_SUCCESS,
+		"status": requests.StatusSuccess,
 	})
 }
 
@@ -825,7 +825,7 @@ func ResetHandler(rw http.ResponseWriter, req *http.Request) {
 func PasswordEditHandler(rw http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
@@ -835,7 +835,7 @@ func PasswordEditHandler(rw http.ResponseWriter, req *http.Request) {
 	u, err := db.GetDeveloperById(id)
 	if err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
@@ -845,14 +845,14 @@ func PasswordEditHandler(rw http.ResponseWriter, req *http.Request) {
 	update := map[string]interface{}{"password": util.HashPassword(req.FormValue("new"), u.Salt)}
 	if err := db.UpdateDeveloper(query, update); err != nil {
 		renderer.JSON(rw, http.StatusBadRequest, map[string]string{
-			"status": requests.STATUS_FAILED,
+			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
 		return
 	}
 
 	renderer.JSON(rw, http.StatusOK, map[string]interface{}{
-		"status": requests.STATUS_SUCCESS,
+		"status": requests.StatusSuccess,
 		"user":   u,
 	})
 }
