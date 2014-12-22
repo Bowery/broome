@@ -150,6 +150,7 @@ func DeveloperInfoHandler(rw http.ResponseWriter, req *http.Request) {
 		"Name":                d.Name,
 		"Email":               d.Email,
 		"IsAdmin":             d.IsAdmin,
+		"IsPaid":              d.IsPaid,
 		"NextPaymentTime":     string(marshalledTime[1 : len(marshalledTime)-1]), // trim inexplainable quotes and Z at the end that breaks shit
 		"IntegrationEngineer": d.IntegrationEngineer,
 	})
@@ -205,6 +206,10 @@ func UpdateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 
 	if isAdmin := req.FormValue("isAdmin"); isAdmin != "" {
 		update["isAdmin"] = isAdmin == "on" || isAdmin == "true"
+	}
+
+	if isPaid := req.FormValue("isPaid"); isPaid != "" {
+		update["isPaid"] = isPaid == "on" || isPaid == "true"
 	}
 
 	// TODO add datetime parsing

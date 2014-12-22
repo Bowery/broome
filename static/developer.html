@@ -17,7 +17,19 @@
     </div>
     <div class="form-group">
       <label>admin access:</label>
-      <input class="is-admin" type="checkbox" name="isAdmin" checked>
+      {{if .IsAdmin}}
+        <input class="is-admin" type="checkbox" name="isAdmin" checked>
+      {{else}}
+        <input class="is-admin" type="checkbox" name="isAdmin">
+      {{end}}
+    </div>
+    <div class="form-group">
+      <label>has paid:</label>
+      {{if .IsPaid}}
+        <input class="is-paid" type="checkbox" name="isPaid" checked>
+      {{else}}
+        <input class="is-paid" type="checkbox" name="isPaid">
+      {{end}}
     </div>
     <div class="form-group">
       <label>next payment time:</label>
