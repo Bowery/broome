@@ -16,7 +16,6 @@ import (
 
 	"github.com/Bowery/broome/db"
 	"github.com/Bowery/gopackages/config"
-	"github.com/Bowery/gopackages/keen"
 	"github.com/Bowery/gopackages/requests"
 	"github.com/Bowery/gopackages/schemas"
 	"github.com/Bowery/gopackages/util"
@@ -38,7 +37,6 @@ var (
 	STATIC_DIR      string = TEMPLATE_DIR
 	chimp           *gochimp.ChimpAPI
 	mandrill        *gochimp.MandrillAPI
-	keenC           *keen.Client
 	stripePublicKey string
 )
 
@@ -86,10 +84,6 @@ func init() {
 	stripe.SetKey(stripeSecretKey)
 	chimp = gochimp.NewChimp(config.MailchimpKey, true)
 	mandrill, _ = gochimp.NewMandrill(config.MandrillKey)
-	keenC = &keen.Client{
-		WriteKey:  config.KeenWriteKey,
-		ProjectID: config.KeenProjectID,
-	}
 }
 
 func AuthHandler(req *http.Request, user, pass string) (bool, error) {
@@ -589,7 +583,6 @@ func CreateSessionHandler(rw http.ResponseWriter, req *http.Request) {
 		"status":    requests.StatusCreated,
 		"developer": u,
 	})
-	keenC.AddEvent("crosby trial new", map[string]*schemas.Developer{"user": u})
 }
 
 // POST /developers/{token}/pay payments
@@ -656,7 +649,6 @@ func PaymentHandler(rw http.ResponseWriter, req *http.Request) {
 		"status":    requests.StatusSuccess,
 		"developer": d,
 	})
-	keenC.AddEvent("bowery payment new", map[string]*schemas.Developer{"developer": d})
 }
 
 // GET /session/{id}, Gets user by ID. If their license has expired it attempts
@@ -670,7 +662,6 @@ func SessionInfoHandler(rw http.ResponseWriter, req *http.Request) {
 			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
-		keenC.AddEvent("crosby session failed", map[string]string{"id": id})
 		return
 	}
 
@@ -679,7 +670,6 @@ func SessionInfoHandler(rw http.ResponseWriter, req *http.Request) {
 			"status":    requests.StatusFound,
 			"developer": u,
 		})
-		keenC.AddEvent("crosby session found", map[string]*schemas.Developer{"user": u})
 		return
 	}
 
@@ -688,7 +678,6 @@ func SessionInfoHandler(rw http.ResponseWriter, req *http.Request) {
 			"status":    requests.StatusExpired,
 			"developer": u,
 		})
-		keenC.AddEvent("crosby trial expired", map[string]*schemas.Developer{"user": u})
 		return
 	}
 
@@ -706,7 +695,6 @@ func SessionInfoHandler(rw http.ResponseWriter, req *http.Request) {
 			"status": requests.StatusFailed,
 			"error":  err.Error(),
 		})
-		keenC.AddEvent("crosby payment failed", map[string]*schemas.Developer{"user": u})
 		return
 	}
 	u.Expiration = time.Now()
@@ -722,7 +710,6 @@ func SessionInfoHandler(rw http.ResponseWriter, req *http.Request) {
 		"status": requests.StatusFound,
 		"user":   u,
 	})
-	keenC.AddEvent("crosby payment recurred", map[string]*schemas.Developer{"user": u})
 }
 
 // GET /admin/signup/:id, Renders signup find. Will also handle billing
