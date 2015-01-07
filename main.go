@@ -6,10 +6,17 @@ import (
 	"os"
 
 	"github.com/Bowery/gopackages/config"
+	"github.com/Bowery/gopackages/slack"
 	"github.com/Bowery/gopackages/web"
 )
 
+var (
+	slackC *slack.Client
+)
+
 func main() {
+	slackC = slack.NewClient(config.SlackToken)
+
 	port := ":4000"
 	if os.Getenv("ENV") == "production" {
 		port = ":80"
