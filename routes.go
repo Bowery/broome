@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -337,12 +336,10 @@ func CreateDeveloperHandler(rw http.ResponseWriter, req *http.Request) {
 
 	// Post to slack
 	if os.Getenv("ENV") == "production" && !strings.Contains(body.Email, "@bowery.io") {
-		payload := url.Values{}
-		payload.Set("token", config.SlackToken)
-		payload.Set("channel", "#activity")
-		payload.Set("text", u.Name+" "+u.Email+" just signed up.")
-		payload.Set("username", "Drizzy Drake")
-		http.PostForm("https://slack.com/api/chat.postMessage", payload)
+		channel := "#activity"
+		message := u.Name + " " + u.Email + " just signed up."
+		username := "Drizzy Drake"
+		go slackC.SendMessage(channel, message, username)
 	}
 
 	renderer.JSON(rw, http.StatusOK, map[string]interface{}{
