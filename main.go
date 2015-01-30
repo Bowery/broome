@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/Bowery/gopackages/config"
-	"github.com/Bowery/gopackages/slack"
 	"github.com/Bowery/gopackages/web"
+	"github.com/Bowery/slack"
 )
 
 var (
